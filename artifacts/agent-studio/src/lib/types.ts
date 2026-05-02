@@ -59,6 +59,8 @@ export interface AppSettings {
   liveCodeFeed: boolean;
   selfUpgrading: boolean;
   selectedPlatform: Platform;
+  userName: string;
+  userColor: string;
 }
 
 export interface AssistantAction {

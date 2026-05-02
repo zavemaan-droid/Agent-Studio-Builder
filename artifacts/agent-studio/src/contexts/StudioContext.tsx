@@ -19,6 +19,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   liveCodeFeed: true,
   selfUpgrading: true,
   selectedPlatform: "web",
+  userName: "",
+  userColor: "#6366f1",
 };
 
 const SEED_MEMORIES: MemoryEntry[] = [

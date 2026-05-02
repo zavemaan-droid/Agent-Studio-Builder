@@ -177,6 +177,9 @@ export default function DashboardPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showReset, setShowReset] = useState(false);
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   const readyProjects = projects.filter(p => p.status === "ready").length;
   const totalLessons = modules.reduce((a, m) => a + m.lessons.length, 0);
   const trainedLessons = modules.reduce(
@@ -289,8 +292,10 @@ Make improvements that are substantive — add specific coding standards, better
       <div className="px-5 py-4 border-b border-border shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-base font-semibold">Agent Studio</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">FREE Pollinations AI · 5-agent build pipeline</p>
+            <h1 className="text-base font-semibold">
+              {greeting}{settings.userName.trim() ? `, ${settings.userName.trim().split(" ")[0]}` : ""}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">5-agent pipeline · {projects.length} project{projects.length !== 1 ? "s" : ""} · {memories.length} memories</p>
           </div>
           <div className="flex items-center gap-2">
             {appliedUpgrades > 0 && (
@@ -487,7 +492,7 @@ Make improvements that are substantive — add specific coding standards, better
             })}
           </div>
           <p className="text-[10px] text-muted-foreground">
-            FREE Pollinations AI · Agents with a ✦ badge have been upgraded via Self Upgrade
+            Agents with a ✦ badge have been upgraded via Self Upgrade
           </p>
         </div>
 
