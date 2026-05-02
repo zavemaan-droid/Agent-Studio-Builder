@@ -1,32 +1,36 @@
 import { useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
-import { GraduationCap, CheckCircle2, Circle, Loader2, Sparkles, RotateCcw, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  GraduationCap, CheckCircle2, Circle, Loader2, Sparkles,
+  RotateCcw, ChevronDown, ChevronRight, Trophy, Info, Brain
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function TrainingPage() {
-  const { modules, trainingState, trainingPercent, trainLesson, trainAll, resetTraining } = useStudio();
+  const { modules, trainingState, trainingPercent, trainLesson, trainAll, resetTraining, memories } = useStudio();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(modules[0]?.id ?? null);
   const [showReset, setShowReset] = useState(false);
-  const [newLessonsFor, setNewLessonsFor] = useState<string | null>(null);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [newLessonsFor, setNewLessonsFor] = useState<Set<string>>(new Set());
 
   const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const trainedCount = modules.reduce(
     (acc, m) => acc + m.lessons.filter(l => trainingState[`${m.id}:${l.id}`]).length, 0
   );
+  const memoriesSaved = memories.filter(m => m.tags.includes("training")).length;
 
   const handleTrain = async (moduleId: string, lessonId: string) => {
     const key = `${moduleId}:${lessonId}`;
     setBusyKey(key);
     try {
       await trainLesson(moduleId, lessonId);
-      // Check if module is now complete
       const mod = modules.find(m => m.id === moduleId);
       if (mod) {
-        const newState = { ...trainingState, [key]: true };
-        const allDone = mod.lessons.every(l => newState[`${moduleId}:${l.id}`]);
-        if (allDone) setNewLessonsFor(moduleId);
+        const tmpState = { ...trainingState, [key]: true };
+        const allDone = mod.lessons.every(l => tmpState[`${moduleId}:${l.id}`]);
+        if (allDone) setNewLessonsFor(prev => new Set(prev).add(moduleId));
       }
     } finally {
       setBusyKey(null);
@@ -37,32 +41,38 @@ export default function TrainingPage() {
     setBusyKey(`mod:${moduleId}`);
     try {
       await trainAll(moduleId);
-      setNewLessonsFor(moduleId);
+      setNewLessonsFor(prev => new Set(prev).add(moduleId));
     } finally {
       setBusyKey(null);
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-y-auto">
       <div className="px-5 py-4 border-b border-border shrink-0">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold">Agent Training</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Train your AI to build better apps for free — knowledge is permanent
-            </p>
+          <div className="flex items-center gap-2.5">
+            <GraduationCap className="w-5 h-5 text-primary" />
+            <div>
+              <h1 className="text-base font-semibold">Agent Training</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Train your agents to build better apps. Completed lessons are saved to Agent Memory.
+              </p>
+            </div>
           </div>
-          <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setShowReset(true)}>
-            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+          <Button size="sm" variant="ghost" className="text-muted-foreground text-xs" onClick={() => setShowReset(true)}>
+            <RotateCcw className="w-3 h-3 mr-1" /> Reset
           </Button>
         </div>
+      </div>
 
-        {/* Overall progress */}
-        <div className="mt-3 space-y-1.5">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{trainedCount} of {totalLessons} lessons trained</span>
-            <span className="font-medium text-foreground">{trainingPercent}% complete</span>
+      <div className="p-5 space-y-4 max-w-2xl mx-auto w-full">
+        {/* Overall progress card */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <p className="text-sm font-semibold">Overall Progress</p>
+            <span className="ml-auto text-sm font-medium text-muted-foreground">{trainedCount}/{totalLessons} lessons</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
@@ -70,23 +80,50 @@ export default function TrainingPage() {
               style={{ width: `${trainingPercent}%` }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Each trained lesson makes the AI smarter at building that type of app
-          </p>
-        </div>
-      </div>
-
-      {showReset && (
-        <div className="mx-5 mt-4 p-4 rounded-lg border border-destructive/30 bg-destructive/5 flex items-center justify-between">
-          <p className="text-sm text-destructive">Reset all training progress?</p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="destructive" onClick={() => { resetTraining(); setShowReset(false); }}>Reset</Button>
-            <Button size="sm" variant="outline" onClick={() => setShowReset(false)}>Cancel</Button>
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{trainingPercent}% complete</span>
+            <div className="flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              <span>{memoriesSaved} memories saved</span>
+            </div>
           </div>
         </div>
-      )}
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-3">
+        {/* How Training Works */}
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+          <button
+            className="w-full flex items-center justify-between"
+            onClick={() => setShowHowItWorks(h => !h)}
+          >
+            <div className="flex items-center gap-2 text-primary">
+              <Sparkles className="w-4 h-4" />
+              <p className="text-sm font-semibold">How Training Works</p>
+            </div>
+            {showHowItWorks ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {showHowItWorks && (
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              AI generates lesson content → You read and learn → Mark complete → Knowledge saved to Agent Memory → Agents use it in builds. Old lessons are replaced with new for continuous improvement.
+            </p>
+          )}
+          {!showHowItWorks && (
+            <p className="text-xs text-muted-foreground">
+              AI generates lesson content → You read and learn → Mark complete → Knowledge saved to Agent Memory → Agents use it in builds.
+            </p>
+          )}
+        </div>
+
+        {showReset && (
+          <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 flex items-center justify-between">
+            <p className="text-sm text-destructive">Reset all training progress?</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" onClick={() => { resetTraining(); setShowReset(false); setNewLessonsFor(new Set()); }}>Reset</Button>
+              <Button size="sm" variant="outline" onClick={() => setShowReset(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Module cards */}
         {modules.map(mod => {
           const modTrained = mod.lessons.filter(l => trainingState[`${mod.id}:${l.id}`]).length;
           const modTotal = mod.lessons.length;
@@ -94,27 +131,28 @@ export default function TrainingPage() {
           const allDone = modTrained === modTotal;
           const isExpanded = expanded === mod.id;
           const busyMod = busyKey === `mod:${mod.id}`;
+          const hasNewLessons = newLessonsFor.has(mod.id);
 
           return (
             <div key={mod.id} className={cn(
-              "rounded-xl border bg-card overflow-hidden transition-all",
+              "rounded-xl border bg-card overflow-hidden",
               allDone && "border-emerald-500/30"
             )}>
               {/* Module header */}
               <button
-                className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
+                className="w-full flex items-start gap-3 p-4 text-left hover:bg-muted/20 transition-colors"
                 onClick={() => setExpanded(isExpanded ? null : mod.id)}
               >
-                <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center" style={{ background: `${mod.color}20` }}>
-                  <GraduationCap className="w-4 h-4" style={{ color: mod.color }} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: `${mod.color}20` }}>
+                  <GraduationCap className="w-5 h-5" style={{ color: mod.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold">{mod.title}</p>
-                    {allDone && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                    {newLessonsFor === mod.id && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{mod.agentLabel}</span>
+                    {hasNewLessons && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary flex items-center gap-1">
-                        <Sparkles className="w-2.5 h-2.5" /> New lessons added
+                        <Sparkles className="w-2.5 h-2.5" /> New lessons
                       </span>
                     )}
                   </div>
@@ -126,14 +164,17 @@ export default function TrainingPage() {
                     <span className="text-[10px] text-muted-foreground shrink-0">{modTrained}/{modTotal}</span>
                   </div>
                 </div>
-                {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                {isExpanded
+                  ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+                  : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+                }
               </button>
 
-              {/* Lessons */}
+              {/* Lesson list */}
               {isExpanded && (
                 <div className="border-t border-border">
-                  <div className="p-3 space-y-1">
-                    {mod.lessons.map(lesson => {
+                  <div className="divide-y divide-border/50">
+                    {mod.lessons.map((lesson, idx) => {
                       const lKey = `${mod.id}:${lesson.id}`;
                       const isTrained = !!trainingState[lKey];
                       const isBusy = busyKey === lKey;
@@ -142,35 +183,42 @@ export default function TrainingPage() {
                         <div
                           key={lesson.id}
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg transition-all",
-                            isTrained ? "bg-emerald-500/5" : "hover:bg-muted/50"
+                            "flex items-center gap-3 px-4 py-3",
+                            isTrained ? "bg-emerald-500/3" : ""
                           )}
                         >
-                          <div className="w-5 h-5 shrink-0 flex items-center justify-center">
-                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> :
+                          <div className="w-7 h-7 rounded-full border border-border flex items-center justify-center shrink-0 text-xs font-medium text-muted-foreground">
+                            {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> :
                              isTrained ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> :
-                             <Circle className="w-4 h-4 text-muted-foreground/40" />}
+                             idx + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={cn("text-sm", isTrained ? "text-muted-foreground line-through" : "text-foreground")}>{lesson.title}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{lesson.description}</p>
+                            <p className={cn("text-sm", isTrained && "text-muted-foreground line-through")}>{lesson.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{lesson.description}</p>
                           </div>
-                          {!isTrained && (
+                          {!isTrained ? (
                             <button
                               onClick={() => handleTrain(mod.id, lesson.id)}
                               disabled={!!busyKey}
-                              className="text-xs px-3 py-1 rounded-md bg-primary/15 text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
+                              className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors disabled:opacity-50 font-medium flex items-center gap-1"
                               data-testid={`train-${lesson.id}`}
                             >
-                              Train
+                              START <ChevronRight className="w-3 h-3" />
                             </button>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 shrink-0">
+                              <Brain className="w-3 h-3" />
+                              <span>Learned</span>
+                            </div>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                  {!allDone && (
-                    <div className="px-3 pb-3">
+
+                  {/* Train all / Module complete */}
+                  <div className="px-4 py-3 border-t border-border/50">
+                    {!allDone ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -179,17 +227,16 @@ export default function TrainingPage() {
                         disabled={!!busyKey}
                         data-testid={`train-all-${mod.id}`}
                       >
-                        {busyMod ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <GraduationCap className="w-3 h-3 mr-1" />}
-                        Train All Lessons
+                        {busyMod ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <GraduationCap className="w-3 h-3 mr-1.5" />}
+                        Train All {modTotal - modTrained} Remaining Lessons
                       </Button>
-                    </div>
-                  )}
-                  {allDone && (
-                    <div className="px-4 pb-3 text-xs text-emerald-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3" />
-                      Module complete — AI has been trained. New advanced lessons may have been added above.
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-emerald-400">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Module complete — knowledge added to Memory Bank. New advanced lessons may have been added.
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

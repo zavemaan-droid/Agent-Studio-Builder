@@ -70,7 +70,9 @@ function StepCard({ step, index }: { step: AgentStep; index: number }) {
 export default function StudioPage() {
   const { startBuild, projects, settings, updateSettings, activeBuildId, getProject } = useStudio();
   const [location, setLocation] = useLocation();
-  const [description, setDescription] = useState("");
+  const prefill = sessionStorage.getItem("studio-prefill") ?? "";
+  if (prefill) sessionStorage.removeItem("studio-prefill");
+  const [description, setDescription] = useState(prefill);
   const [platform, setPlatform] = useState<Platform>(settings.selectedPlatform);
   const [submitting, setSubmitting] = useState(false);
   const [uploadedContent, setUploadedContent] = useState<string | null>(null);
