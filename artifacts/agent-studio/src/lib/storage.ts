@@ -19,5 +19,7 @@ export const KEYS = {
   memories: "memories",
   settings: "settings",
   training: "training",
-  chatHistory: "chat-history"
+  chatHistory: "chat-history",
+  agentPrompts: "agent-prompts",
+  upgradeHistory: "upgrade-history",
 };

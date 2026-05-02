@@ -67,3 +67,17 @@ export interface ChatMessage {
   content: string;
   ts: number;
 }
+
+export interface UpgradeProposal {
+  id: string;
+  title: string;
+  description: string;
+  impact: "high" | "medium" | "low";
+  type: "agent_prompt" | "system_behavior";
+  agentRole?: string;
+  before: string;
+  after: string;
+  appliedAt?: number;
+}
+
+export type AgentPrompts = Record<string, string>;
