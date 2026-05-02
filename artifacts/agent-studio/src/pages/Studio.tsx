@@ -30,29 +30,43 @@ function StepCard({ step, index }: { step: AgentStep; index: number }) {
   return (
     <div className={cn(
       "border rounded-lg overflow-hidden transition-all duration-300",
-      step.status === "running" ? "border-amber-500/50 bg-amber-500/5" :
-      step.status === "done" ? "border-emerald-500/30 bg-emerald-500/5" :
-      step.status === "error" ? "border-destructive/40 bg-destructive/5" :
+      step.status === "running"   ? "border-amber-500/50 bg-amber-500/5" :
+      step.status === "retrying"  ? "border-orange-500/60 bg-orange-500/8" :
+      step.status === "done"      ? "border-emerald-500/30 bg-emerald-500/5" :
+      step.status === "error"     ? "border-destructive/40 bg-destructive/5" :
       "border-border bg-card"
     )}>
       <button
         className="w-full flex items-center gap-3 px-4 py-3 text-left"
-        onClick={() => step.output && setOpen(o => !o)}
+        onClick={() => step.output && step.status === "done" && setOpen(o => !o)}
       >
         <div className="flex items-center justify-center w-5 h-5 shrink-0">
-          {step.status === "queued" && <Circle className="w-4 h-4 text-muted-foreground/40" />}
-          {step.status === "running" && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
-          {step.status === "done" && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-          {step.status === "error" && <XCircle className="w-4 h-4 text-destructive" />}
+          {step.status === "queued"   && <Circle className="w-4 h-4 text-muted-foreground/40" />}
+          {step.status === "running"  && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
+          {step.status === "retrying" && <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />}
+          {step.status === "done"     && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+          {step.status === "error"    && <XCircle className="w-4 h-4 text-destructive" />}
         </div>
         <span className="text-xs font-mono text-muted-foreground/60 w-6 shrink-0">{String(index + 1).padStart(2, "0")}</span>
         <span className={cn("text-sm font-medium flex-1", colorClass)}>{step.name}</span>
-        {step.finishedAt && step.startedAt && (
-          <span className="text-[10px] text-muted-foreground">
-            {((step.finishedAt - step.startedAt) / 1000).toFixed(1)}s
-          </span>
-        )}
-        {step.output && (
+        <div className="flex items-center gap-2">
+          {step.status === "retrying" && (
+            <span className="text-[10px] text-orange-400 font-medium bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/30">
+              retrying {step.attempt}/3
+            </span>
+          )}
+          {step.status === "done" && step.attempt && step.attempt > 1 && (
+            <span className="text-[10px] text-amber-400/70">
+              ✓ passed on attempt {step.attempt}
+            </span>
+          )}
+          {step.finishedAt && step.startedAt && (
+            <span className="text-[10px] text-muted-foreground">
+              {((step.finishedAt - step.startedAt) / 1000).toFixed(1)}s
+            </span>
+          )}
+        </div>
+        {step.output && step.status === "done" && (
           open ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
         )}
       </button>

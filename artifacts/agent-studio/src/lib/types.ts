@@ -5,7 +5,8 @@ export type AgentRole = "architect" | "builder" | "designer" | "qa" | "packager"
 export interface AgentStep {
   role: AgentRole;
   name: string;
-  status: "queued" | "running" | "done" | "error";
+  status: "queued" | "running" | "retrying" | "done" | "error";
+  attempt?: number;
   output: string;
   startedAt?: number;
   finishedAt?: number;

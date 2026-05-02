@@ -581,6 +581,72 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     persistProjects(next);
   }, [persistProjects]);
 
+  // ── Build retry helper ──
+  async function runAgentWithRetry(
+    step: AgentStep,
+    stepIndex: number,
+    description: string,
+    platform: Platform,
+    previousOutputs: string,
+    working: Project,
+    updateProjectFn: (p: Project) => void,
+  ): Promise<{ output: string; finalWorking: Project }> {
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 1500;
+    let lastError: Error = new Error("Agent failed");
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      // Mark as retrying on attempts 2+
+      if (attempt > 1) {
+        const retrying: Project = {
+          ...working,
+          steps: working.steps.map((s, idx) =>
+            idx === stepIndex
+              ? { ...s, status: "retrying" as const, attempt, output: `Attempt ${attempt} of ${MAX_ATTEMPTS}…` }
+              : s
+          ),
+          updatedAt: Date.now(),
+        };
+        updateProjectFn(retrying);
+        working = retrying;
+        await new Promise(r => setTimeout(r, RETRY_DELAY_MS * (attempt - 1)));
+      }
+
+      try {
+        // On retry add a nudge to the prompt
+        const basePrompt = resolvePrompt(step.role, description, platform, previousOutputs, agentPromptsRef.current);
+        const prompt = attempt === 1 ? basePrompt : basePrompt + (
+          step.role === "packager" || step.role === "designer" || step.role === "qa" || step.role === "builder"
+            ? `\n\n⚠️ RETRY ${attempt}/${MAX_ATTEMPTS}: Your previous response did not include the required \`\`\`files JSON block. You MUST respond with the complete \`\`\`files {"files":[...]} \`\`\` block. Start your response with \`\`\`files immediately. Do not add any explanation before the block.`
+            : `\n\n⚠️ RETRY ${attempt}/${MAX_ATTEMPTS}: Your previous response was empty or incomplete. Please provide the full, complete response now.`
+        );
+
+        const output = await callAI(
+          [{ role: "user", content: prompt }],
+          { groqKey: settingsRef.current.groqKey }
+        );
+
+        // For file-producing agents: verify output has substance
+        if ((step.role === "packager" || step.role === "builder") &&
+            parseFilesFromText(output).length === 0 &&
+            attempt < MAX_ATTEMPTS) {
+          throw new Error(`No files extracted from ${step.role} output`);
+        }
+
+        if (!output.trim() && attempt < MAX_ATTEMPTS) {
+          throw new Error("Empty response from AI");
+        }
+
+        return { output, finalWorking: working };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt === MAX_ATTEMPTS) throw lastError;
+      }
+    }
+
+    throw lastError;
+  }
+
   // ──────────────────────────────────────────────
   // Build pipeline
   // ──────────────────────────────────────────────
@@ -624,18 +690,16 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         updateProject(working);
 
         try {
-          const prompt = resolvePrompt(step.role, description, platform, previousOutputs, agentPromptsRef.current);
-          const output = await callAI(
-            [{ role: "user", content: prompt }],
-            { groqKey: settingsRef.current.groqKey }
+          const { output, finalWorking } = await runAgentWithRetry(
+            step, i, description, platform, previousOutputs, working, updateProject
           );
-
+          working = finalWorking;
           previousOutputs = output;
 
           working = {
             ...working,
             steps: working.steps.map((s, idx) =>
-              idx === i ? { ...s, status: "done", output, finishedAt: Date.now() } : s
+              idx === i ? { ...s, status: "done", output, attempt: s.attempt, finishedAt: Date.now() } : s
             ),
             updatedAt: Date.now(),
           };
