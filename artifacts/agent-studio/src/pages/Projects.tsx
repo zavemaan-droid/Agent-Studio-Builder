@@ -387,7 +387,8 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
 
 // ── Project card ──
 function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => void }) {
-  const { pushToGithub, settings } = useStudio();
+  const { pushToGithub, settings, rebuildFromStep } = useStudio();
+  const [rebuilding, setRebuilding] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pushResult, setPushResult] = useState<string | null>(null);
@@ -582,14 +583,59 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
           </div>
         )}
 
-        {/* Failed state */}
-        {project.status === "failed" && (
-          <div className="border-t border-destructive/20 px-4 py-2.5">
-            <p className="text-xs text-destructive">
-              {project.steps.find(s => s.status === "error")?.output?.slice(0, 120) ?? "Build failed"}
-            </p>
-          </div>
-        )}
+        {/* Failed state — show which step failed + rebuild button */}
+        {project.status === "failed" && (() => {
+          const failedIdx = project.steps.findIndex(s => s.status === "error");
+          const failedStep = project.steps[failedIdx];
+          return (
+            <div className="border-t border-destructive/20 px-4 py-3 space-y-2.5">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-destructive">
+                    {failedStep ? `${failedStep.name} failed` : "Build failed"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
+                    {failedStep?.output?.slice(0, 100) ?? "An agent encountered an error"}
+                  </p>
+                </div>
+              </div>
+              {/* Step indicators */}
+              <div className="flex gap-1">
+                {project.steps.map((s, idx) => (
+                  <div
+                    key={s.role}
+                    className={cn(
+                      "flex-1 h-1 rounded-full",
+                      s.status === "done"  ? "bg-emerald-400" :
+                      s.status === "error" ? "bg-destructive" :
+                      "bg-muted"
+                    )}
+                    title={s.name}
+                  />
+                ))}
+              </div>
+              {/* Rebuild button */}
+              {failedIdx >= 0 && (
+                <button
+                  disabled={rebuilding}
+                  onClick={() => {
+                    setRebuilding(true);
+                    rebuildFromStep(project.id, failedIdx);
+                    setTimeout(() => setRebuilding(false), 2000);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 text-destructive text-xs font-medium transition-colors disabled:opacity-60"
+                >
+                  {rebuilding
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <RefreshCw className="w-3.5 h-3.5" />
+                  }
+                  Rebuild from {failedStep?.name ?? "failed step"}
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Building — show what each agent is doing */}
         {project.status === "building" && (

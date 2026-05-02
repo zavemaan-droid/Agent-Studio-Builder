@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
   Zap, Globe, Smartphone, CheckCircle2, Circle, Loader2,
-  XCircle, ChevronDown, ChevronRight, Upload, X
+  XCircle, ChevronDown, ChevronRight, Upload, X, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Platform, AgentStep } from "@/lib/types";
@@ -23,7 +23,7 @@ const PRESETS = [
   { label: "Android Chat", description: "An Android messaging app with contacts, chat threads, and notifications using Jetpack Compose", platform: "android" as Platform },
 ];
 
-function StepCard({ step, index }: { step: AgentStep; index: number }) {
+function StepCard({ step, index, onRebuild }: { step: AgentStep; index: number; onRebuild?: () => void }) {
   const [open, setOpen] = useState(false);
   const colorClass = AGENT_COLORS[step.role] ?? "text-muted-foreground";
 
@@ -77,12 +77,23 @@ function StepCard({ step, index }: { step: AgentStep; index: number }) {
           </pre>
         </div>
       )}
+      {step.status === "error" && onRebuild && (
+        <div className="px-4 pb-3">
+          <button
+            onClick={onRebuild}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 text-destructive text-xs font-medium transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Rebuild from {step.name}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function StudioPage() {
-  const { startBuild, projects, settings, updateSettings, activeBuildId, getProject } = useStudio();
+  const { startBuild, rebuildFromStep, projects, settings, updateSettings, activeBuildId, getProject } = useStudio();
   const [location, setLocation] = useLocation();
   const prefill = sessionStorage.getItem("studio-prefill") ?? "";
   if (prefill) sessionStorage.removeItem("studio-prefill");
@@ -239,7 +250,12 @@ export default function StudioPage() {
             </div>
             <div className="space-y-1.5">
               {activeProject.steps.map((step, i) => (
-                <StepCard key={step.role} step={step} index={i} />
+                <StepCard
+                  key={step.role}
+                  step={step}
+                  index={i}
+                  onRebuild={step.status === "error" ? () => rebuildFromStep(activeProject.id, i) : undefined}
+                />
               ))}
             </div>
             {activeProject.status === "ready" && (
