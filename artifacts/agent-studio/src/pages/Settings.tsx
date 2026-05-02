@@ -105,6 +105,8 @@ export default function SettingsPage() {
     );
   };
 
+  const COLORS = ["#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#06b6d4","#ef4444","#84cc16"];
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="px-5 py-4 border-b border-border shrink-0">
@@ -113,6 +115,47 @@ export default function SettingsPage() {
       </div>
 
       <div className="p-5 space-y-6 max-w-lg">
+
+        {/* Profile */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profile</h2>
+          <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0"
+                style={{ background: settings.userColor || "#6366f1" }}
+              >
+                {settings.userName.trim()
+                  ? settings.userName.trim().split(/\s+/).map(w => w[0]).join("").toUpperCase().slice(0, 2)
+                  : "?"}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  value={settings.userName}
+                  onChange={e => set({ userName: e.target.value })}
+                  placeholder="Your name"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50"
+                  maxLength={32}
+                />
+                <div className="flex gap-1.5 flex-wrap">
+                  {COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => set({ userColor: c })}
+                      className={cn(
+                        "w-5 h-5 rounded-full transition-all",
+                        settings.userColor === c ? "ring-2 ring-offset-2 ring-offset-card ring-white scale-110" : "hover:scale-110"
+                      )}
+                      style={{ background: c }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* AI Configuration */}
         <section className="space-y-3">
