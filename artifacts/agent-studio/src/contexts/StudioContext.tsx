@@ -21,6 +21,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   selectedPlatform: "web",
   userName: "John Thurmond",
   userColor: "#6366f1",
+  voiceName: "",     // auto-pick best British male
+  voiceRate: 0.88,   // deliberate, authoritative pace
+  voicePitch: 0.80,  // deep, JARVIS-like tone
 };
 
 const SEED_MEMORIES: MemoryEntry[] = [

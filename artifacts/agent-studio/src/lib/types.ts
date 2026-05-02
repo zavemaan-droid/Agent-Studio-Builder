@@ -62,6 +62,9 @@ export interface AppSettings {
   selectedPlatform: Platform;
   userName: string;
   userColor: string;
+  voiceName: string;
+  voiceRate: number;
+  voicePitch: number;
 }
 
 export interface AssistantAction {
