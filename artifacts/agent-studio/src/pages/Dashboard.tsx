@@ -218,48 +218,52 @@ export default function DashboardPage() {
         fullPrompt: prompt,
       }));
 
-      const aiPrompt = `You are the Self-Upgrade AI for Agent Studio, a 5-agent AI build pipeline. Your job is to analyze the current agent prompts and generate SPECIFIC, REAL upgrade proposals that will permanently improve code generation quality.
+      const aiPrompt = `You are the Self-Upgrade AI for Agent Studio. Analyze the current agent prompts and generate 4 upgrade proposals that will permanently improve code generation quality.
 
-## Current System State
+Current system state:
 ${JSON.stringify(systemState, null, 2)}
 
-## Current Agent Prompts (what you are ACTUALLY upgrading)
+Current agent prompts to improve:
 ${JSON.stringify(currentPromptsSnippets, null, 2)}
 
-## Your Task
-Generate exactly 4 upgrade proposals. Each proposal must:
-1. Target a SPECIFIC agent (architect, builder, designer, qa, or packager)
-2. Have a CONCRETE "after" value — the FULL improved prompt text, not a description of changes
-3. Be a genuine improvement based on the system state (e.g., if training is low, add more context; if no Groq key, optimize for speed; if many projects built, add more polish requirements)
-4. Show the REAL before text (the current prompt for that agent) and the improved after text
+Return ONLY a valid JSON array — no markdown fences, no explanation, no text before or after. Start your response with [ and end with ].
 
-Return ONLY a JSON array with this exact schema — no markdown, no explanation, just the JSON:
-[
-  {
-    "id": "up-001",
-    "title": "Short descriptive title",
-    "description": "1-2 sentences explaining what this improves and why",
-    "impact": "high" | "medium" | "low",
-    "type": "agent_prompt",
-    "agentRole": "architect" | "builder" | "designer" | "qa" | "packager",
-    "before": "the EXACT current prompt for this agent (copy it exactly)",
-    "after": "the FULL improved prompt text with actual content"
-  }
-]
+Each object in the array must have exactly these fields:
+- "id": a unique string like "up-001"
+- "title": short descriptive title (string)
+- "description": 1-2 sentences on what improves and why (string)
+- "impact": one of these exact values — "high", "medium", or "low"
+- "type": always "agent_prompt"
+- "agentRole": one of — "architect", "builder", "designer", "qa", "packager"
+- "before": the exact current prompt text for that agent (copy it)
+- "after": the full improved prompt text (not a description — the actual prompt)
 
-Make improvements that are substantive — add specific coding standards, better instructions, stricter requirements, or domain expertise based on the system state. Do not make trivial changes.`;
+Example of correct format:
+[{"id":"up-001","title":"Better Builder Output","description":"Adds stricter output format rules.","impact":"high","type":"agent_prompt","agentRole":"builder","before":"current prompt...","after":"improved full prompt..."}]
+
+Make 4 substantive improvements. Do not add markdown. Start with [ immediately.`;
 
       const raw = await callAI(
         [{ role: "user", content: aiPrompt }],
         { groqKey: settings.groqKey }
       );
 
-      // Extract JSON from response
-      const jsonMatch = raw.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error("AI returned invalid format — try again");
+      // Strip any markdown fences the AI may have added despite instructions
+      const stripped = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```\s*$/, "")
+        .trim();
 
-      const parsed = JSON.parse(jsonMatch[0]) as UpgradeProposal[];
-      if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("No proposals generated");
+      // Extract the JSON array — find the outermost [ ... ]
+      const start = stripped.indexOf("[");
+      const end = stripped.lastIndexOf("]");
+      if (start === -1 || end === -1 || end <= start) {
+        throw new Error("AI returned an unexpected format. Try again — it usually works on the second attempt.");
+      }
+      const jsonStr = stripped.slice(start, end + 1);
+
+      const parsed = JSON.parse(jsonStr) as UpgradeProposal[];
+      if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("No proposals generated — please try again");
 
       // Validate and fill in actual before text from current prompts
       const validated = parsed.map((p, i) => ({

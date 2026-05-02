@@ -140,7 +140,7 @@ export const INITIAL_MODULES: TrainingModule[] = [
 // ──────────────────────────────────────────────
 
 function buildSystemPrompt(memories: MemoryEntry[], trainedModules: TrainingModule[], trainingState: Record<string, boolean>): string {
-  const autoMemories = memories.filter(m => m.autoInclude).slice(0, 30);
+  const autoMemories = memories.filter(m => m.autoInclude).slice(0, 60);
   const memorySection = autoMemories.length > 0
     ? `\n\n## Your Learned Knowledge\n${autoMemories.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
     : "";
@@ -295,7 +295,11 @@ Improvements to make:
 - Improve mobile responsiveness (works on any screen size)
 - Replace any plain/ugly UI elements with polished versions
 
-Return the updated files in \`\`\`files format. Keep ALL existing functionality intact — only improve visuals.`,
+CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
+\`\`\`files
+{"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"}],"summary":"What was improved"}
+\`\`\`
+Keep ALL existing functionality intact — only improve visuals. Every file must be complete, no truncation.`,
 
   qa: `You are the QA agent. Your job is to find and fix every bug in the code for: "{description}".
 
@@ -309,7 +313,11 @@ Systematically fix ALL of these:
 - Broken or missing event listeners
 - Any async code that could reject without a catch
 
-Return the fully corrected, hardened files in \`\`\`files format. Every bug must be fixed.`,
+CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
+\`\`\`files
+{"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"}],"summary":"Bugs fixed"}
+\`\`\`
+Every file must be complete and untruncated. Every bug must be fixed.`,
 
   packager: `You are the Packager agent. Finalise and polish the app: "{description}" for {platform}.
 
@@ -323,7 +331,11 @@ Tasks:
 - Ensure the app starts without errors and is immediately usable
 - Add a one-line comment at the top of each file describing its purpose
 
-Return the final production-ready files in \`\`\`files format. These go directly to the user.`,
+CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
+\`\`\`files
+{"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"}],"summary":"App name and what it does"}
+\`\`\`
+These files go directly to John. Every file must be complete, production-ready, and untruncated.`,
 };
 
 // Resolve a stored prompt template with actual values
@@ -350,14 +362,49 @@ function resolvePrompt(
 // ──────────────────────────────────────────────
 
 export function parseFilesFromText(text: string): { path: string; content: string }[] {
+  // Strategy 1: ```files {"files":[...]} ``` — the canonical format
   try {
     const match = text.match(/```files\s*([\s\S]*?)```/);
-    if (!match?.[1]) return [];
-    const parsed = JSON.parse(match[1].trim()) as { files?: { path: string; content: string }[] };
-    return parsed.files ?? [];
-  } catch {
-    return [];
+    if (match?.[1]) {
+      const parsed = JSON.parse(match[1].trim()) as { files?: { path: string; content: string }[] };
+      if (parsed.files && parsed.files.length > 0) return parsed.files;
+    }
+  } catch { /* fall through */ }
+
+  // Strategy 2: ```json [...] or {...files:[]} ``` — AI sometimes wraps in json fence
+  try {
+    const fences = [...text.matchAll(/```(?:json|javascript|js)?\s*([\s\S]*?)```/g)];
+    for (const fence of fences) {
+      const raw = fence[1]?.trim();
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as { files?: { path: string; content: string }[] } | { path: string; content: string }[];
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.path && parsed[0]?.content) return parsed;
+      if (!Array.isArray(parsed) && parsed.files && parsed.files.length > 0) return parsed.files;
+    }
+  } catch { /* fall through */ }
+
+  // Strategy 3: individual named file blocks  ```filename.ext\n...code\n```
+  const fileBlockRegex = /```([\w./\-]+\.(?:html|css|js|ts|jsx|tsx|py|kt|xml|json|md))\s*\n([\s\S]*?)```/g;
+  const namedFiles: { path: string; content: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = fileBlockRegex.exec(text)) !== null) {
+    const path = m[1]!.trim();
+    const content = m[2]!.trim();
+    if (path && content) namedFiles.push({ path, content });
   }
+  if (namedFiles.length > 0) return namedFiles;
+
+  // Strategy 4: look for // filename.ext comment headers above code blocks
+  const commentFileRegex = /\/\/\s*([\w./\-]+\.(?:html|css|js|ts|jsx|tsx|py|kt|xml|json|md))\s*\n```[\w]*\s*\n?([\s\S]*?)```/g;
+  const commentFiles: { path: string; content: string }[] = [];
+  while ((m = commentFileRegex.exec(text)) !== null) {
+    const path = m[1]!.trim();
+    const content = m[2]!.trim();
+    if (path && content) commentFiles.push({ path, content });
+  }
+  if (commentFiles.length > 0) return commentFiles;
+
+  return [];
 }
 
 // ──────────────────────────────────────────────
