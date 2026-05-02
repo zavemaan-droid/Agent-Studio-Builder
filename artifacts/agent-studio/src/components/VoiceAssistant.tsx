@@ -4,7 +4,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { callAI } from "@/lib/ai";
 import { loadData, saveData } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { Mic, X, ChevronDown, WifiOff, Clock, Ear, Navigation } from "lucide-react";
+import { Mic, X, ChevronDown, WifiOff, Clock, Ear, Navigation, Radio } from "lucide-react";
 
 const ASSISTANT_NAME = "NOVA";
 
@@ -208,32 +208,44 @@ function ThinkingDots() {
   );
 }
 
+// Wake word patterns — any transcript that contains these triggers activation
+const WAKE_PATTERNS = ["nova", "hey nova", "ok nova", "okay nova", "oi nova"];
+
+function containsWakeWord(text: string): boolean {
+  const lower = text.toLowerCase().replace(/[^a-z\s]/g, "");
+  return WAKE_PATTERNS.some(p => lower.includes(p));
+}
+
 export function VoiceAssistant() {
   const { settings, addUserMessage, addAssistantMessage, memories } = useStudio();
   const [, setLocation] = useLocation();
 
-  const [mode,        setMode]        = useState<VoiceMode>("idle");
-  const [transcript,  setTranscript]  = useState("");
-  const [reply,       setReply]       = useState("");
-  const [navLinks,    setNavLinks]    = useState<NavLink[]>([]);
-  const [cardVisible, setCardVisible] = useState(false);
-  const [minimized,   setMinimized]   = useState(false);
-  const [isOnline,    setIsOnline]    = useState(navigator.onLine);
-  const [queue,       setQueue]       = useState<QueueItem[]>(() => readQueue());
-  const [queueStatus, setQueueStatus] = useState("");
-  const [handsFree,   setHandsFree]   = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
+  const [mode,           setMode]           = useState<VoiceMode>("idle");
+  const [transcript,     setTranscript]     = useState("");
+  const [reply,          setReply]          = useState("");
+  const [navLinks,       setNavLinks]       = useState<NavLink[]>([]);
+  const [cardVisible,    setCardVisible]    = useState(false);
+  const [minimized,      setMinimized]      = useState(false);
+  const [isOnline,       setIsOnline]       = useState(navigator.onLine);
+  const [queue,          setQueue]          = useState<QueueItem[]>(() => readQueue());
+  const [queueStatus,    setQueueStatus]    = useState("");
+  const [handsFree,      setHandsFree]      = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
+  const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
 
-  const transcriptRef  = useRef("");
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const modeRef        = useRef<VoiceMode>("idle");
-  const handsFreeRef   = useRef(handsFree);
-  const processingRef  = useRef(false);
-  const setLocationRef = useRef(setLocation);
+  const transcriptRef     = useRef("");
+  const recognitionRef    = useRef<SpeechRecognition | null>(null);
+  const wakeRecognitionRef= useRef<SpeechRecognition | null>(null);
+  const modeRef           = useRef<VoiceMode>("idle");
+  const handsFreeRef      = useRef(handsFree);
+  const wakeEnabledRef    = useRef(settings.wakeWordEnabled);
+  const processingRef     = useRef(false);
+  const setLocationRef    = useRef(setLocation);
   // Always-current voice settings ref so speak() closure sees latest values
-  const voiceSettingsRef = useRef({ name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch });
+  const voiceSettingsRef  = useRef({ name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch });
 
-  useEffect(() => { modeRef.current = mode; },           [mode]);
-  useEffect(() => { handsFreeRef.current = handsFree; }, [handsFree]);
+  useEffect(() => { modeRef.current = mode; },             [mode]);
+  useEffect(() => { handsFreeRef.current = handsFree; },   [handsFree]);
+  useEffect(() => { wakeEnabledRef.current = settings.wakeWordEnabled; }, [settings.wakeWordEnabled]);
   useEffect(() => { saveData(HANDSFREE_KEY, handsFree); }, [handsFree]);
   useEffect(() => { setLocationRef.current = setLocation; }, [setLocation]);
   useEffect(() => {
@@ -255,8 +267,149 @@ export function VoiceAssistant() {
   }, []);
 
   useEffect(() => {
-    return () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); };
+    return () => {
+      recognitionRef.current?.stop();
+      wakeRecognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+    };
   }, []);
+
+  // ── Wake word listener ─────────────────────────────────────
+  const stopWakeListener = useCallback(() => {
+    if (wakeRecognitionRef.current) {
+      wakeRecognitionRef.current.onend = null;
+      wakeRecognitionRef.current.onerror = null;
+      wakeRecognitionRef.current.onresult = null;
+      try { wakeRecognitionRef.current.stop(); } catch { /* ignore */ }
+      wakeRecognitionRef.current = null;
+    }
+    setWakeActive(false);
+  }, []);
+
+  const startWakeListenerRef = useRef<() => void>(() => {});
+
+  const startWakeListener = useCallback(() => {
+    // Don't run if: disabled, hands-free active, already running, or mic busy
+    if (!wakeEnabledRef.current) return;
+    if (handsFreeRef.current) return;
+    if (wakeRecognitionRef.current) return;
+    if (modeRef.current !== "idle") return;
+
+    const SRClass =
+      (window as unknown as Record<string, unknown>)["SpeechRecognition"] as typeof SpeechRecognition | undefined ??
+      (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"] as typeof SpeechRecognition | undefined;
+    if (!SRClass) return;
+
+    const wake = new SRClass();
+    wakeRecognitionRef.current = wake;
+    wake.continuous     = true;
+    wake.interimResults = true;
+    wake.lang           = "en-US";
+    setWakeActive(true);
+
+    let triggered = false;
+
+    wake.onresult = (e: SpeechRecognitionEvent) => {
+      if (triggered) return;
+      let text = "";
+      for (let i = 0; i < e.results.length; i++) text += e.results[i]![0]!.transcript;
+      if (!containsWakeWord(text)) return;
+
+      // Wake word detected!
+      triggered = true;
+      stopWakeListener();
+      setCardVisible(true);
+      setMinimized(false);
+      setTranscript("");
+      setReply("");
+      setNavLinks([]);
+      // Brief visual flash then activate mic
+      setTimeout(() => {
+        if (modeRef.current === "idle" && !handsFreeRef.current) {
+          startWakeListenerRef.current = () => {}; // break recursion guard
+          recognitionRef.current = null;           // ensure clean state
+          // Tiny JARVIS ack then listen
+          const u = new SpeechSynthesisUtterance("Yes.");
+          const { name, rate, pitch } = voiceSettingsRef.current;
+          u.rate   = rate  ?? 0.88;
+          u.pitch  = pitch ?? 0.80;
+          u.volume = 1.0;
+          const v = pickVoice(name || undefined);
+          if (v) u.voice = v;
+          u.onend = () => {
+            // Now actually start listening for the command
+            const SRClass2 =
+              (window as unknown as Record<string, unknown>)["SpeechRecognition"] as typeof SpeechRecognition | undefined ??
+              (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"] as typeof SpeechRecognition | undefined;
+            if (!SRClass2 || recognitionRef.current) return;
+            const rec        = new SRClass2();
+            recognitionRef.current = rec;
+            rec.continuous     = false;
+            rec.interimResults = true;
+            rec.lang           = "en-US";
+            transcriptRef.current = "";
+            setTranscript("");
+            setMode("listening");
+            rec.onresult = (ev: SpeechRecognitionEvent) => {
+              let t = "";
+              for (let i = 0; i < ev.results.length; i++) t += ev.results[i]![0]!.transcript;
+              transcriptRef.current = t;
+              setTranscript(t);
+            };
+            rec.onend   = () => void handleRecognitionEndRef.current();
+            rec.onerror = (ev) => {
+              const err = (ev as unknown as { error: string }).error;
+              if (err !== "no-speech") { setMode("idle"); recognitionRef.current = null; }
+              else { setMode("idle"); recognitionRef.current = null; }
+            };
+            rec.start();
+          };
+          window.speechSynthesis.cancel();
+          setMode("speaking");
+          window.speechSynthesis.speak(u);
+        }
+      }, 80);
+    };
+
+    wake.onend = () => {
+      if (wakeRecognitionRef.current === wake) {
+        wakeRecognitionRef.current = null;
+        setWakeActive(false);
+        // Auto-restart if still enabled and idle
+        if (wakeEnabledRef.current && !handsFreeRef.current && modeRef.current === "idle") {
+          setTimeout(() => startWakeListenerRef.current(), 500);
+        }
+      }
+    };
+
+    wake.onerror = (e) => {
+      const err = (e as unknown as { error: string }).error;
+      if (wakeRecognitionRef.current === wake) {
+        wakeRecognitionRef.current = null;
+        setWakeActive(false);
+        // Restart on transient errors
+        if (err !== "not-allowed" && err !== "service-not-allowed") {
+          if (wakeEnabledRef.current && !handsFreeRef.current && modeRef.current === "idle") {
+            setTimeout(() => startWakeListenerRef.current(), 1000);
+          }
+        }
+      }
+    };
+
+    try { wake.start(); } catch { wakeRecognitionRef.current = null; setWakeActive(false); }
+  }, [stopWakeListener]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep startWakeListenerRef current to avoid stale closures in the self-restart
+  useEffect(() => { startWakeListenerRef.current = startWakeListener; }, [startWakeListener]);
+
+  // Start/stop wake listener when setting changes
+  useEffect(() => {
+    if (settings.wakeWordEnabled && !handsFree && modeRef.current === "idle") {
+      setTimeout(() => startWakeListener(), 600);
+    } else if (!settings.wakeWordEnabled) {
+      stopWakeListener();
+    }
+  }, [settings.wakeWordEnabled, handsFree, startWakeListener, stopWakeListener]);
 
   const speak = useCallback((text: string): Promise<void> => {
     return new Promise(resolve => {
@@ -437,7 +590,12 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       }
     }
 
-    if (handsFreeRef.current) setTimeout(startListening, 700);
+    if (handsFreeRef.current) {
+      setTimeout(startListening, 700);
+    } else if (wakeEnabledRef.current) {
+      // Return to wake word listening after interaction
+      setTimeout(() => startWakeListenerRef.current(), 800);
+    }
   }, [speak, askAI, addUserMessage, addAssistantMessage, startListening]);
 
   useEffect(() => { handleRecognitionEndRef.current = handleRecognitionEnd; }, [handleRecognitionEnd]);
@@ -552,6 +710,8 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     const next = !handsFreeRef.current;
     setHandsFree(next);
     if (next) {
+      // Hands-free ON — stop wake listener since it's redundant
+      stopWakeListener();
       void speak(`Hands-free on. I'm always listening.`);
     } else {
       window.speechSynthesis.cancel();
@@ -559,15 +719,20 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       recognitionRef.current = null;
       setMode("idle");
       void speak("Hands-free off. Tap the mic when you need me.");
+      // If wake word is enabled, start wake listener
+      if (wakeEnabledRef.current) {
+        setTimeout(() => startWakeListenerRef.current(), 1200);
+      }
     }
-  }, [speak]);
+  }, [speak, stopWakeListener]);
 
   const stopAll = useCallback(() => {
     recognitionRef.current?.stop();
     recognitionRef.current = null;
+    stopWakeListener();
     window.speechSynthesis?.cancel();
     setMode("idle");
-  }, []);
+  }, [stopWakeListener]);
 
   const clearQueue = useCallback(() => { writeQueue([]); setQueue([]); }, []);
 
@@ -583,6 +748,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   const modeLabel =
     offline && mode === "idle" ? (hasQueue ? `Offline · ${queuedCount} queued` : "Offline") :
     mode === "idle" && handsFree ? "Always listening" :
+    mode === "idle" && wakeActive ? `Awaiting "Hey NOVA"` :
     mode === "idle"      ? `Hey ${ASSISTANT_NAME}` :
     mode === "listening" ? "Listening…"           :
     mode === "thinking"  ? queueStatus || "Thinking…" :
@@ -592,6 +758,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     idle:
       offline   ? "bg-gradient-to-br from-orange-500 to-amber-600 hover:scale-105" :
       handsFree ? "bg-gradient-to-br from-violet-500 to-fuchsia-600 hover:scale-105" :
+      wakeActive? "bg-gradient-to-br from-cyan-500 to-teal-700 hover:scale-105 hover:shadow-cyan-500/30" :
                   "bg-gradient-to-br from-primary to-purple-700 hover:scale-105 hover:shadow-primary/40",
     listening: "bg-gradient-to-br from-rose-500 to-red-600 scale-110 shadow-rose-500/50",
     thinking:  "bg-gradient-to-br from-primary/70 to-purple-800 cursor-not-allowed",
@@ -604,6 +771,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     mode === "speaking"  ? "bg-emerald-400 animate-pulse" :
     offline              ? "bg-orange-400 animate-pulse"  :
     handsFree            ? "bg-fuchsia-400 animate-pulse" :
+    wakeActive           ? "bg-cyan-400 animate-pulse"    :
     "bg-primary/60";
 
   return (
@@ -730,9 +898,17 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
           <span className="absolute -inset-4 rounded-full bg-emerald-500/20 blur-xl animate-pulse pointer-events-none" />
         )}
 
-        {mode === "idle" && !handsFree && (
+        {mode === "idle" && !handsFree && !wakeActive && (
           <span className={cn("absolute -inset-2 rounded-full blur-lg animate-pulse pointer-events-none",
             offline ? "bg-orange-500/15" : "bg-primary/10")} style={{ animationDuration: "3s" }} />
+        )}
+
+        {/* Wake word active indicator — subtle cyan rings */}
+        {wakeActive && mode === "idle" && !handsFree && (
+          <>
+            <span className="absolute inset-0 rounded-full bg-cyan-400/15 animate-ping pointer-events-none" style={{ animationDuration: "3s" }} />
+            <span className="absolute -inset-3 rounded-full bg-cyan-400/8 animate-ping pointer-events-none" style={{ animationDuration: "4s", animationDelay: "0.8s" }} />
+          </>
         )}
 
         <button
