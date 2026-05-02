@@ -21,9 +21,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   selectedPlatform: "web",
   userName: "John Thurmond",
   userColor: "#6366f1",
-  voiceName: "",     // auto-pick best British male
-  voiceRate: 0.88,   // deliberate, authoritative pace
-  voicePitch: 0.80,  // deep, JARVIS-like tone
+  voiceName: "",      // auto-pick best British male
+  voiceRate: 0.88,    // deliberate, authoritative pace
+  voicePitch: 0.80,   // deep, JARVIS-like tone
+  wakeWordEnabled: false, // "Hey NOVA" always-on wake word
 };
 
 const SEED_MEMORIES: MemoryEntry[] = [

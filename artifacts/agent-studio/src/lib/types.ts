@@ -65,6 +65,7 @@ export interface AppSettings {
   voiceName: string;
   voiceRate: number;
   voicePitch: number;
+  wakeWordEnabled: boolean;
 }
 
 export interface AssistantAction {

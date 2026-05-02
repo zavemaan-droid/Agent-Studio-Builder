@@ -3,7 +3,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import { pingPollinations } from "@/lib/ai";
 import { saveData, KEYS } from "@/lib/storage";
-import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Circle, Volume2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Circle, Volume2, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAvailableVoices } from "@/components/VoiceAssistant";
 
@@ -401,6 +401,34 @@ export default function SettingsPage() {
               >
                 Reset
               </Button>
+            </div>
+
+            {/* Wake word toggle */}
+            <div className="flex items-start justify-between gap-4 pt-3 border-t border-border/50">
+              <div className="space-y-0.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="text-sm font-medium">Hey NOVA — Wake Word</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed pl-5.5">
+                  NOVA listens passively for your voice. Say <span className="text-cyan-400 font-medium">"Hey NOVA"</span> to activate hands-free — no button tap needed. The bubble glows cyan when active.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.wakeWordEnabled}
+                onClick={() => set({ wakeWordEnabled: !settings.wakeWordEnabled })}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mt-0.5",
+                  settings.wakeWordEnabled ? "bg-cyan-500" : "bg-input"
+                )}
+              >
+                <span className={cn(
+                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200",
+                  settings.wakeWordEnabled ? "translate-x-5" : "translate-x-0"
+                )} />
+              </button>
             </div>
           </div>
         </section>
