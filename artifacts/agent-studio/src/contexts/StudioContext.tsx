@@ -425,6 +425,7 @@ interface Ctx {
 
   // Projects
   startBuild: (description: string, platform: Platform) => Promise<string>;
+  rebuildFromStep: (projectId: string, fromStepIndex: number) => void;
   deleteProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
   pushToGithub: (projectId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
@@ -1116,11 +1117,117 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     persistProjects(projectsRef.current.filter(p => p.id !== id));
   }, [persistProjects]);
 
+  // ──────────────────────────────────────────────
+  // Rebuild from a specific step
+  // ──────────────────────────────────────────────
+  const rebuildFromStep = useCallback((projectId: string, fromStepIndex: number): void => {
+    const project = projectsRef.current.find(p => p.id === projectId);
+    if (!project) return;
+
+    // Collect outputs from already-completed steps before fromStepIndex
+    const previousOutputs = project.steps
+      .slice(0, fromStepIndex)
+      .filter(s => s.status === "done")
+      .map(s => s.output)
+      .join("\n\n---\n\n");
+
+    // Reset steps from fromStepIndex onwards to queued
+    let working: Project = {
+      ...project,
+      status: "building",
+      steps: project.steps.map((s, idx) =>
+        idx >= fromStepIndex
+          ? { ...s, status: "queued" as const, output: "", startedAt: undefined, finishedAt: undefined, attempt: undefined }
+          : s
+      ),
+      updatedAt: Date.now(),
+    };
+    persistProjects(projectsRef.current.map(p => p.id === projectId ? working : p));
+    setActiveBuildId(projectId);
+
+    (async () => {
+      let prevOutput = previousOutputs;
+
+      for (let i = fromStepIndex; i < working.steps.length; i++) {
+        const step = working.steps[i]!;
+
+        working = {
+          ...working,
+          steps: working.steps.map((s, idx) =>
+            idx === i ? { ...s, status: "running", startedAt: Date.now() } : s
+          ),
+          updatedAt: Date.now(),
+        };
+        updateProject(working);
+
+        try {
+          const { output, finalWorking } = await runAgentWithRetry(
+            step, i, project.description, project.platform, prevOutput, working, updateProject
+          );
+          working = finalWorking;
+          prevOutput = output;
+
+          working = {
+            ...working,
+            steps: working.steps.map((s, idx) =>
+              idx === i ? { ...s, status: "done", output, attempt: s.attempt, finishedAt: Date.now() } : s
+            ),
+            updatedAt: Date.now(),
+          };
+          updateProject(working);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Agent failed";
+          working = {
+            ...working,
+            status: "failed",
+            steps: working.steps.map((s, idx) =>
+              idx === i ? { ...s, status: "error", output: msg, finishedAt: Date.now() } : s
+            ),
+            updatedAt: Date.now(),
+          };
+          updateProject(working);
+          setActiveBuildId(null);
+          return;
+        }
+      }
+
+      // Finalize
+      const packagerOutput = working.steps[4]?.output ?? "";
+      const files = parseFilesFromText(packagerOutput) ||
+        parseFilesFromText(working.steps[1]?.output ?? "") ||
+        parseFilesFromText(working.steps[2]?.output ?? "");
+
+      working = {
+        ...working,
+        status: "ready",
+        files: files.length > 0 ? files : undefined,
+        manifest: `${project.name.toLowerCase().replace(/\s+/g, "-")}-1.0.0`,
+        updatedAt: Date.now(),
+      };
+      updateProject(working);
+      setActiveBuildId(null);
+
+      if (settingsRef.current.selfUpgrading) {
+        const mem: MemoryEntry = {
+          id: newId("mem-"),
+          type: "solution",
+          title: `Build: ${project.name}`,
+          body: `Successfully built "${project.description}" on ${project.platform}. Used 5-agent pipeline.`,
+          tags: ["build", project.platform, "auto"],
+          autoInclude: true,
+          createdAt: Date.now(),
+        };
+        const exists = memoriesRef.current.some(m => m.title.toLowerCase() === mem.title.toLowerCase());
+        if (!exists) persistMemories([mem, ...memoriesRef.current]);
+      }
+    })();
+  }, [persistProjects, updateProject, persistMemories]);
+
   return (
     <StudioContext.Provider value={{
       ready, projects, memories, settings, modules, trainingState,
       chatHistory, activeBuildId, agentPrompts, upgradeHistory,
-      startBuild, deleteProject, getProject, pushToGithub,
+      startBuild, rebuildFromStep, deleteProject, getProject, pushToGithub,
       addUserMessage, addAssistantMessage, updateLastAssistantMessage, clearChat, sendChat,
       addMemory, removeMemory,
       updateSettings,
