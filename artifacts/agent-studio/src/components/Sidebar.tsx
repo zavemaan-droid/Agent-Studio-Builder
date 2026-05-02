@@ -38,14 +38,15 @@ export function Sidebar() {
   const { projects, activeBuildId, settings } = useStudio();
   const [collapsed, setCollapsed] = useState(false);
 
-  const activeCount = projects.filter(p => p.status === "building").length;
-  const displayName = settings.userName.trim() || "You";
-  const userColor = settings.userColor || "#6366f1";
+  const activeCount  = projects.filter(p => p.status === "building").length;
+  const displayName  = settings.userName.trim() || "You";
+  const userColor    = settings.userColor || "#6366f1";
 
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
+        // Hidden on mobile — BottomNav handles mobile navigation
+        "hidden md:flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
         collapsed ? "w-14" : "w-56"
       )}
     >
@@ -62,7 +63,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* + New Build button */}
+      {/* + New Build */}
       <div className="px-2 pt-2 pb-1">
         <button
           onClick={() => setLocation("/studio")}
@@ -79,7 +80,6 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-1 px-2 flex flex-col gap-0.5 overflow-y-auto">
-        {/* Assistant */}
         <Link
           href="/assistant"
           className={cn(
@@ -124,39 +124,23 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className={cn(
-        "px-3 py-3 border-t border-sidebar-border space-y-2",
-        collapsed && "px-2"
-      )}>
-        {/* Build status */}
-        <div className={cn(
-          "rounded-lg bg-card border border-border p-2",
-          collapsed && "p-1.5"
-        )}>
+      <div className={cn("px-3 py-3 border-t border-sidebar-border space-y-2", collapsed && "px-2")}>
+        <div className={cn("rounded-lg bg-card border border-border p-2", collapsed && "p-1.5")}>
           <div className={cn("flex items-center gap-1.5", collapsed && "justify-center")}>
             <Circle className={cn(
               "w-2 h-2 shrink-0",
-              activeCount > 0
-                ? "fill-amber-400 text-amber-400 animate-pulse"
-                : "fill-emerald-400 text-emerald-400"
+              activeCount > 0 ? "fill-amber-400 text-amber-400 animate-pulse" : "fill-emerald-400 text-emerald-400"
             )} />
             {!collapsed && (
-              <span className={cn(
-                "text-[10px] font-medium",
-                activeCount > 0 ? "text-amber-400" : "text-emerald-400"
-              )}>
+              <span className={cn("text-[10px] font-medium", activeCount > 0 ? "text-amber-400" : "text-emerald-400")}>
                 {activeCount > 0 ? `${activeCount} build${activeCount > 1 ? "s" : ""} running` : "Ready"}
               </span>
             )}
           </div>
         </div>
 
-        {/* User profile */}
         {!collapsed ? (
-          <Link
-            href="/settings"
-            className="flex items-center gap-2 pt-0.5 hover:opacity-80 transition-opacity"
-          >
+          <Link href="/settings" className="flex items-center gap-2 pt-0.5 hover:opacity-80 transition-opacity">
             <Avatar name={displayName} color={userColor} size="sm" />
             <p className="text-[11px] font-medium text-foreground truncate flex-1">{displayName}</p>
           </Link>
@@ -166,7 +150,6 @@ export function Sidebar() {
           </Link>
         )}
 
-        {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(c => !c)}
           className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"

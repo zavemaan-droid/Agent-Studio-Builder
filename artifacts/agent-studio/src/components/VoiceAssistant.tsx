@@ -5,38 +5,46 @@ import { loadData, saveData } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { Mic, X, ChevronDown, WifiOff, Clock, Ear } from "lucide-react";
 
+// ── Assistant name ───────────────────────────────────────────
+const ASSISTANT_NAME = "NOVA";
+
 type VoiceMode = "idle" | "listening" | "thinking" | "speaking";
 
 // ── Storage keys ─────────────────────────────────────────────
-const QUEUE_KEY      = "voice-queue";
-const CACHE_KEY      = "voice-cache";
-const HANDSFREE_KEY  = "voice-handsfree";
-const CACHE_MAX      = 80;
-const CACHE_TTL_MS   = 48 * 60 * 60 * 1000; // 48 h
+const QUEUE_KEY     = "voice-queue";
+const CACHE_KEY     = "voice-cache";
+const HANDSFREE_KEY = "voice-handsfree";
+const CACHE_MAX     = 80;
+const CACHE_TTL_MS  = 48 * 60 * 60 * 1000;
 
 interface QueueItem  { id: string; text: string; queuedAt: number; }
 interface CacheEntry { response: string; cachedAt: number; }
 
 // ── Pre-seeded offline knowledge ─────────────────────────────
-// These answers are baked in so the assistant works offline for common questions
 const SEED_CACHE: Record<string, string> = {
-  "what can you do": "I can build web and Android apps from plain English, manage your projects, improve my own AI agents, and answer anything about Agent Studio — all without you writing code.",
-  "what are you": "I'm the Agent Studio AI — your personal voice assistant. I live inside Agent Studio and know every feature of it. Think of me like JARVIS.",
-  "how do i build an app": "Head to Studio in the sidebar, describe what you want, pick Web or Android, then hit Start Build. Five AI agents write the code while you watch.",
-  "where are my projects": "Your built apps are all in Projects. Each one has a live Preview, Download, and GitHub push button ready to go.",
-  "how do i make you smarter": "Add memories in the Memory Bank with auto-include on, and they'll be injected into every build. Or run Self Upgrade on the Dashboard to permanently improve my build pipeline.",
-  "what is self upgrade": "Self Upgrade reads my current agent prompts, finds weaknesses, and proposes specific improvements. You approve or skip each one — approved changes are permanently written into how I build apps.",
-  "what agents do you have": "Five agents: Architect plans the structure, Builder writes the code, UI Designer polishes the look, QA hunts bugs, and Packager wraps it all up.",
-  "how does training work": "Training has lessons organized into modules. Each lesson you complete gets saved to Memory Bank and makes future builds smarter.",
-  "what is the memory bank": "The Memory Bank is permanent knowledge storage. Auto-include memories are injected into every build prompt — the more you add, the better I get.",
-  "how do i add my api key": "Go to Settings and paste your Groq key. It makes my responses significantly faster. GitHub token is also there if you want to push apps to a repo.",
-  "are you offline": "I might be offline right now, but I've cached knowledge about Agent Studio so I can still help with questions. Complex build requests will queue and process once connectivity returns.",
-  "can you hear me": "Loud and clear. In hands-free mode I'm always listening — just speak naturally and I'll respond.",
-  "hands free": "Hands-free mode keeps me listening continuously. After I finish speaking, I automatically restart so you can talk from across the room without touching anything.",
-  "stop listening": "Turning off hands-free mode now. Tap the bubble whenever you want to talk.",
-  "hello": "Hey — what do you need?",
-  "hey": "What's up?",
-  "hi": "Hi there. What can I help with?",
+  "what can you do":     "I can build web and Android apps from plain English, manage your projects, improve my own build agents, and answer anything about Agent Studio — all without you writing code.",
+  "who are you":         `I'm ${ASSISTANT_NAME}, your personal AI assistant inside Agent Studio. Think of me as the intelligence behind the whole system.`,
+  "what are you":        `I'm ${ASSISTANT_NAME}, your personal AI assistant inside Agent Studio. Think of me as the intelligence behind the whole system.`,
+  "your name":           `I'm ${ASSISTANT_NAME}. Neural Operations and Voice Assistant — built into Agent Studio.`,
+  "what is your name":   `My name is ${ASSISTANT_NAME}. I'm your personal voice assistant for Agent Studio.`,
+  "how do i build":      "Head to Studio in the sidebar or tap Build in the bottom nav, describe your app, pick Web or Android, and hit Start Build. Five AI agents write the code.",
+  "build an app":        "Head to Studio, describe your app in plain English, pick Web or Android, and hit Start Build. Five AI agents handle the rest.",
+  "where are my projects": "Your built apps are all in Projects. Each one has a live Preview, Download, and GitHub push button.",
+  "how do i make you smarter": "Add memories in Memory Bank with auto-include enabled, and they'll be injected into every build. Or run Self Upgrade on the Dashboard to permanently improve my build pipeline.",
+  "self upgrade":        "Self Upgrade reads my current agent prompts, finds weaknesses, and proposes specific improvements. You approve or skip each — approved changes are written permanently into how I build apps.",
+  "what agents":         "Five agents: Architect plans structure, Builder writes code, UI Designer polishes the look, QA hunts bugs, and Packager wraps it all up.",
+  "training":            "Training has lessons organized into modules. Each completed lesson gets saved to Memory Bank and makes future builds smarter.",
+  "memory bank":         "Memory Bank is permanent knowledge storage. Auto-include memories are injected into every build prompt — the more you add, the sharper I get.",
+  "api key":             "Go to Settings and paste your Groq API key for faster responses. GitHub token is also there to push apps directly to your repo.",
+  "offline":             "I'm offline right now, but I have cached knowledge about Agent Studio so I can still help with questions. Complex build requests will queue and process once you're reconnected.",
+  "can you hear me":     "Loud and clear. In hands-free mode I'm always listening — just speak naturally.",
+  "hands free":          "Hands-free mode keeps me listening continuously. After I respond, I automatically restart so you can talk from across the room without touching anything.",
+  "stop listening":      "Turning off hands-free mode now. Tap the mic whenever you need me.",
+  "hello":               "Hey — what do you need?",
+  "hey":                 "What's up?",
+  "hi":                  "Hi there. What can I help with?",
+  "hey nova":            "Right here. What do you need?",
+  "nova":                "I'm listening.",
 };
 
 // ── Cache helpers ─────────────────────────────────────────────
@@ -55,11 +63,9 @@ function writeCache(cache: Record<string, CacheEntry>): void {
 
 function getCached(text: string): string | null {
   const key = cacheKey(text);
-  // Check seed cache first (exact keyword match)
   for (const [seed, answer] of Object.entries(SEED_CACHE)) {
     if (key.includes(seed) || seed.includes(key)) return answer;
   }
-  // Check persisted cache
   const cache = readCache();
   const entry = cache[key];
   if (!entry) return null;
@@ -74,8 +80,8 @@ function setCached(text: string, response: string): void {
 }
 
 // ── Queue helpers ─────────────────────────────────────────────
-function readQueue(): QueueItem[]           { return loadData<QueueItem[]>(QUEUE_KEY, []); }
-function writeQueue(q: QueueItem[]): void   { saveData(QUEUE_KEY, q); }
+function readQueue(): QueueItem[]         { return loadData<QueueItem[]>(QUEUE_KEY, []); }
+function writeQueue(q: QueueItem[]): void { saveData(QUEUE_KEY, q); }
 
 // ── Speech helpers ────────────────────────────────────────────
 function stripForSpeech(text: string): string {
@@ -94,14 +100,42 @@ function stripForSpeech(text: string): string {
     .trim();
 }
 
+/**
+ * Pick the best available voice — targeting a formal British male sound
+ * closest to the JARVIS/Iron Man style. On Android Chrome this will be
+ * "Google UK English Male"; on macOS it will be "Daniel".
+ */
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
-  const prefer  = ["Samantha","Google UK English Female","Microsoft Zira","Karen","Victoria","Moira","Tessa","Google US English","Microsoft Eva","Microsoft Aria"];
+
+  // Ordered preference — British male first, then any good English voice
+  const prefer = [
+    "Google UK English Male",
+    "Daniel",          // macOS / iOS British male
+    "Oliver",          // some Windows British male
+    "Arthur",          // Microsoft British male
+    "Microsoft George",
+    "Google UK English Female",
+    "Rishi",           // Indian English male (neutral accent)
+    "Google US English",
+    "Microsoft David",
+    "Microsoft Mark",
+    "Alex",            // macOS default
+    "Samantha",
+  ];
+
   for (const name of prefer) {
     const v = voices.find(v => v.name.includes(name));
     if (v) return v;
   }
-  return voices.find(v => v.lang.startsWith("en")) ?? voices[0] ?? null;
+
+  // Fallback: any en-GB voice, then any en- voice, then anything
+  return (
+    voices.find(v => v.lang === "en-GB") ??
+    voices.find(v => v.lang.startsWith("en")) ??
+    voices[0] ??
+    null
+  );
 }
 
 // ── Sub-components ────────────────────────────────────────────
@@ -122,9 +156,9 @@ function WaveBars({ count = 5, heights }: { count?: number; heights?: number[] }
 function ThinkingDots() {
   return (
     <div className="flex gap-1 items-center">
-      {[0,1,2].map(i => (
+      {[0, 1, 2].map(i => (
         <span key={i} className="w-1.5 h-1.5 rounded-full bg-white animate-bounce"
-          style={{ animationDelay: `${i*0.15}s`, animationDuration: "0.7s" }} />
+          style={{ animationDelay: `${i * 0.15}s`, animationDuration: "0.7s" }} />
       ))}
     </div>
   );
@@ -152,19 +186,14 @@ export function VoiceAssistant() {
 
   useEffect(() => { modeRef.current = mode; },           [mode]);
   useEffect(() => { handsFreeRef.current = handsFree; }, [handsFree]);
-
-  // Persist hands-free preference
   useEffect(() => { saveData(HANDSFREE_KEY, handsFree); }, [handsFree]);
 
-  // Pre-load voices
   useEffect(() => { if ("speechSynthesis" in window) window.speechSynthesis.getVoices(); }, []);
-
-  // Cleanup
   useEffect(() => {
     return () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); };
   }, []);
 
-  // ── speak() → returns Promise, resolves when done ──────────
+  // ── speak() ───────────────────────────────────────────────
   const speak = useCallback((text: string): Promise<void> => {
     return new Promise(resolve => {
       if (!("speechSynthesis" in window)) { setMode("idle"); resolve(); return; }
@@ -173,8 +202,8 @@ export function VoiceAssistant() {
       if (!clean) { setMode("idle"); resolve(); return; }
 
       const utterance  = new SpeechSynthesisUtterance(clean);
-      utterance.rate   = 1.08;
-      utterance.pitch  = 1.0;
+      utterance.rate   = 1.05;   // Slightly measured — JARVIS-like deliberate pace
+      utterance.pitch  = 0.92;   // Slightly deeper
       utterance.volume = 1.0;
 
       const doSpeak = () => {
@@ -192,15 +221,12 @@ export function VoiceAssistant() {
     });
   }, []);
 
-  // ── startListening() — used by both manual & hands-free ───
+  // ── startListening() ─────────────────────────────────────
   const startListening = useCallback(() => {
     const SRClass =
-      (window as unknown as Record<string,unknown>)["SpeechRecognition"] as typeof SpeechRecognition | undefined ??
-      (window as unknown as Record<string,unknown>)["webkitSpeechRecognition"] as typeof SpeechRecognition | undefined;
-    if (!SRClass) return;
-
-    // Don't double-start
-    if (recognitionRef.current) return;
+      (window as unknown as Record<string, unknown>)["SpeechRecognition"] as typeof SpeechRecognition | undefined ??
+      (window as unknown as Record<string, unknown>)["webkitSpeechRecognition"] as typeof SpeechRecognition | undefined;
+    if (!SRClass || recognitionRef.current) return;
 
     const recognition          = new SRClass();
     recognitionRef.current     = recognition;
@@ -222,8 +248,8 @@ export function VoiceAssistant() {
 
     recognition.onend   = () => void handleRecognitionEndRef.current();
     recognition.onerror = (e) => {
-      // 'no-speech' in hands-free mode = just restart listening
-      if ((e as unknown as { error: string }).error === "no-speech" && handsFreeRef.current) {
+      const err = (e as unknown as { error: string }).error;
+      if (err === "no-speech" && handsFreeRef.current) {
         recognitionRef.current = null;
         setTimeout(startListening, 300);
       } else {
@@ -235,21 +261,25 @@ export function VoiceAssistant() {
     recognition.start();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── System prompt builder ──────────────────────────────────
+  // ── System prompt ─────────────────────────────────────────
   const buildPrompt = useCallback(() => {
     const name     = settings.userName.trim();
     const autoMems = memories.filter(m => m.autoInclude).slice(0, 10);
-    const ctx      = autoMems.length ? `\n\nContext:\n${autoMems.map(m=>`- ${m.title}: ${m.body}`).join("\n")}` : "";
-    return `You are the Agent Studio AI — the personal voice assistant for${name ? ` ${name}` : " the user"}. You run inside Agent Studio and know every feature of it. Be like JARVIS — brilliant, warm, direct, a little witty.
+    const ctx      = autoMems.length
+      ? `\n\nContext:\n${autoMems.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
+      : "";
+    return `You are ${ASSISTANT_NAME}, the personal AI voice assistant for${name ? ` ${name}` : " the user"}. You run inside Agent Studio and know every feature of it. You are formal, precise, calm, and deeply capable — like a brilliant chief of staff. Direct. Never verbose.
 
-VOICE RULES (critical):
-- Respond in 1 to 3 spoken sentences max.
-- No markdown. No bullets. No code. Natural speech only.
-- Be a smart, direct friend. Never say "I cannot."
-- If asked to do something, say you're doing it and briefly how.${ctx}`;
+VOICE RULES (critical — you are speaking aloud):
+- Respond in 1 to 3 spoken sentences max. Never longer.
+- No markdown. No bullets. No code. Pure natural speech.
+- Sound like a trusted expert, not a chatbot. Composed and confident.
+- If asked about Agent Studio features, give the precise answer directly.
+- If asked to do something, confirm it crisply and say what you're doing.
+- Never say "I cannot." Always find a path.${ctx}`;
   }, [settings, memories]);
 
-  // ── AI call with cache ─────────────────────────────────────
+  // ── AI call with cache ────────────────────────────────────
   const askAI = useCallback(async (text: string): Promise<string> => {
     const cached = getCached(text);
     if (cached) return cached;
@@ -261,15 +291,13 @@ VOICE RULES (critical):
     return raw;
   }, [buildPrompt, settings.groqKey]);
 
-  // ── Core: handle what to do after speech is captured ──────
-  // Use a ref so startListening's onend closure always has the latest version
+  // ── handleRecognitionEnd (via ref so closure stays fresh) ─
   const handleRecognitionEndRef = useRef(async () => {});
 
   const handleRecognitionEnd = useCallback(async () => {
     const text = transcriptRef.current.trim();
     recognitionRef.current = null;
 
-    // Nothing said: in hands-free, restart listening
     if (!text) {
       if (handsFreeRef.current) { setTimeout(startListening, 300); return; }
       setMode("idle");
@@ -278,7 +306,7 @@ VOICE RULES (critical):
 
     setMode("thinking");
 
-    // ── OFFLINE PATH ──
+    // OFFLINE PATH
     if (!navigator.onLine) {
       const cached = getCached(text);
       if (cached) {
@@ -292,7 +320,7 @@ VOICE RULES (critical):
         const next = [...readQueue(), item];
         writeQueue(next);
         setQueue(next);
-        const msg = "I'm offline and don't have that cached, but I've saved your message. I'll answer as soon as we reconnect.";
+        const msg = "I'm offline, but I've saved your message. I'll answer the moment we reconnect.";
         setReply(msg);
         await speak(msg);
       }
@@ -300,7 +328,7 @@ VOICE RULES (critical):
       return;
     }
 
-    // ── ONLINE PATH ──
+    // ONLINE PATH
     try {
       addUserMessage(text);
       const raw   = await askAI(text);
@@ -309,32 +337,28 @@ VOICE RULES (critical):
       addAssistantMessage(raw);
       await speak(clean);
     } catch {
-      // Network glitch: try cache
       const fallback = getCached(text);
       if (fallback) {
         const clean = stripForSpeech(fallback);
         setReply(clean);
-        await speak(`Connection hiccup — but I have this one cached. ${clean}`);
+        await speak(`Connectivity issue — but I have this one. ${clean}`);
       } else {
-        // Queue for retry
         const item: QueueItem = { id: `vq-${Date.now()}`, text, queuedAt: Date.now() };
         const next = [...readQueue(), item];
         writeQueue(next);
         setQueue(next);
-        const err = "Having a connectivity issue — I've queued that and will answer when I'm back.";
+        const err = "I'm having a connectivity issue. I've queued that and will answer when I'm back.";
         setReply(err);
         await speak(err);
       }
     }
 
-    // Hands-free: restart listening after response
     if (handsFreeRef.current) setTimeout(startListening, 700);
   }, [speak, askAI, addUserMessage, addAssistantMessage, startListening]);
 
-  // Keep the ref up to date
   useEffect(() => { handleRecognitionEndRef.current = handleRecognitionEnd; }, [handleRecognitionEnd]);
 
-  // ── Process offline queue when coming back online ──────────
+  // ── Process offline queue ─────────────────────────────────
   const processQueue = useCallback(async (currentQueue: QueueItem[]) => {
     if (processingRef.current || currentQueue.length === 0) return;
     processingRef.current = true;
@@ -345,7 +369,7 @@ VOICE RULES (critical):
 
     const intro = total === 1
       ? `Welcome back${name ? `, ${name}` : ""}. You asked me something while I was offline.`
-      : `Welcome back${name ? `, ${name}` : ""}. You sent me ${total} messages offline — let me go through them.`;
+      : `Welcome back${name ? `, ${name}` : ""}. ${total} messages queued offline — processing now.`;
 
     setCardVisible(true);
     setMinimized(false);
@@ -354,11 +378,10 @@ VOICE RULES (critical):
 
     for (let i = 0; i < remaining.length; i++) {
       const item = remaining[i]!;
-      setQueueStatus(`Message ${i+1} of ${total}…`);
+      setQueueStatus(`Message ${i + 1} of ${total}…`);
       setTranscript(item.text);
       setReply("");
       setMode("thinking");
-
       try {
         addUserMessage(item.text);
         const raw   = await askAI(item.text);
@@ -367,11 +390,10 @@ VOICE RULES (critical):
         addAssistantMessage(raw);
         await speak(clean);
       } catch {
-        const err = "Couldn't fetch a response for that one — you can ask again.";
+        const err = "Couldn't retrieve a response for that one.";
         setReply(err);
         await speak(err);
       }
-
       remaining = remaining.slice(1);
       writeQueue(remaining);
       setQueue(remaining);
@@ -382,7 +404,7 @@ VOICE RULES (critical):
     if (handsFreeRef.current) setTimeout(startListening, 800);
   }, [speak, askAI, addUserMessage, addAssistantMessage, settings.userName, startListening]);
 
-  // ── Online / Offline events ────────────────────────────────
+  // ── Online / Offline events ───────────────────────────────
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -390,7 +412,7 @@ VOICE RULES (critical):
       if (q.length > 0) void processQueue(q);
       else {
         const name = settings.userName.trim();
-        void speak(`Connection restored${name ? `, ${name}` : ""}. All good.`);
+        void speak(`Connection restored${name ? `, ${name}` : ""}. All systems go.`);
       }
     };
     const handleOffline = () => {
@@ -406,7 +428,7 @@ VOICE RULES (critical):
     };
   }, [processQueue, speak, settings.userName]);
 
-  // Drain queue if we load with a queue already saved
+  // Drain queue on first load
   useEffect(() => {
     if (navigator.onLine) {
       const q = readQueue();
@@ -414,26 +436,22 @@ VOICE RULES (critical):
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When hands-free is first enabled, start listening immediately
+  // Activate hands-free on toggle
   useEffect(() => {
     if (handsFree && modeRef.current === "idle") {
       setCardVisible(true);
       setMinimized(false);
       setTimeout(startListening, 400);
     }
-    if (!handsFree) {
-      recognitionRef.current?.stop();
-    }
+    if (!handsFree) recognitionRef.current?.stop();
   }, [handsFree, startListening]);
 
-  // ── Bubble tap ─────────────────────────────────────────────
+  // ── Bubble tap ────────────────────────────────────────────
   const handleBubbleTap = useCallback(() => {
     const current = modeRef.current;
-
     if (current === "speaking") {
       window.speechSynthesis.cancel();
       setMode("idle");
-      // In hands-free, jump straight back to listening after interrupt
       if (handsFreeRef.current) setTimeout(startListening, 300);
       return;
     }
@@ -443,19 +461,17 @@ VOICE RULES (critical):
       return;
     }
     if (current === "thinking") return;
-
-    // Idle — start listening manually
     setCardVisible(true);
     setMinimized(false);
     startListening();
   }, [startListening]);
 
-  // ── Toggle hands-free ──────────────────────────────────────
+  // ── Toggle hands-free ─────────────────────────────────────
   const toggleHandsFree = useCallback(() => {
     const next = !handsFreeRef.current;
     setHandsFree(next);
     if (next) {
-      void speak("Hands-free mode on. I'm always listening — just talk.");
+      void speak(`Hands-free on. I'm always listening.`);
     } else {
       window.speechSynthesis.cancel();
       recognitionRef.current?.stop();
@@ -474,24 +490,24 @@ VOICE RULES (critical):
 
   const clearQueue = useCallback(() => { writeQueue([]); setQueue([]); }, []);
 
-  // ── Derived ────────────────────────────────────────────────
-  const offline      = !isOnline;
-  const queuedCount  = queue.length;
-  const hasQueue     = queuedCount > 0;
+  // ── Derived ───────────────────────────────────────────────
+  const offline     = !isOnline;
+  const queuedCount = queue.length;
+  const hasQueue    = queuedCount > 0;
 
   const modeLabel =
     offline && mode === "idle" ? (hasQueue ? `Offline · ${queuedCount} queued` : "Offline") :
     mode === "idle" && handsFree ? "Always listening" :
-    mode === "idle"      ? "Tap to speak"  :
-    mode === "listening" ? "Listening…"    :
+    mode === "idle"      ? `Hey ${ASSISTANT_NAME}` :
+    mode === "listening" ? "Listening…"           :
     mode === "thinking"  ? queueStatus || "Thinking…" :
                            "Speaking…";
 
   const BUBBLE_STYLE: Record<VoiceMode, string> = {
     idle:
-      offline      ? "bg-gradient-to-br from-orange-500 to-amber-600 hover:scale-105" :
-      handsFree    ? "bg-gradient-to-br from-violet-500 to-fuchsia-600 hover:scale-105" :
-                     "bg-gradient-to-br from-primary to-purple-700 hover:scale-105 hover:shadow-primary/40",
+      offline   ? "bg-gradient-to-br from-orange-500 to-amber-600 hover:scale-105" :
+      handsFree ? "bg-gradient-to-br from-violet-500 to-fuchsia-600 hover:scale-105" :
+                  "bg-gradient-to-br from-primary to-purple-700 hover:scale-105 hover:shadow-primary/40",
     listening: "bg-gradient-to-br from-rose-500 to-red-600 scale-110 shadow-rose-500/50",
     thinking:  "bg-gradient-to-br from-primary/70 to-purple-800 cursor-not-allowed",
     speaking:  "bg-gradient-to-br from-emerald-500 to-teal-600 scale-105 shadow-emerald-500/50",
@@ -506,36 +522,46 @@ VOICE RULES (critical):
     "bg-primary/60";
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2 select-none">
+    /*
+     * Positioning:
+     *  Mobile:  above the 56px bottom nav + device safe area
+     *  Desktop: standard bottom-6 right-6
+     * We use a CSS custom property set on :root in index.css — but since
+     * Tailwind can't express env() in utilities, we use an inline style only
+     * for mobile and override it at md breakpoint via a class.
+     */
+    <div className="nova-bubble fixed right-4 md:right-6 z-[100] flex flex-col items-end gap-2 select-none">
 
-      {/* ── Card panel ─────────────────────────────────────── */}
+      {/* ── Card panel ────────────────────────────────── */}
       {cardVisible && !minimized && (
-        <div className="bg-[#0f0f14] border border-white/10 rounded-2xl shadow-2xl w-72 overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="bg-[#0f0f14] border border-white/10 rounded-2xl shadow-2xl w-[min(17rem,calc(100vw-2rem))] overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8">
             <div className="flex items-center gap-2">
               <div className={cn("w-2 h-2 rounded-full transition-colors", dotColor)} />
               <span className="text-[11px] font-medium text-white/60 tracking-wide uppercase truncate max-w-[150px]">
-                {modeLabel}
+                {ASSISTANT_NAME} · {modeLabel}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => setMinimized(true)} className="p-1 text-white/40 hover:text-white/80 transition-colors" title="Minimise">
+              <button onClick={() => setMinimized(true)}
+                className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Minimise">
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => { stopAll(); setCardVisible(false); setTranscript(""); setReply(""); }} className="p-1 text-white/40 hover:text-white/80 transition-colors" title="Close">
+              <button
+                onClick={() => { stopAll(); setCardVisible(false); setTranscript(""); setReply(""); }}
+                className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Close">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           <div className="px-4 py-3 space-y-3 min-h-[64px]">
-            {/* Hands-free ambient indicator */}
             {handsFree && mode === "idle" && !transcript && !reply && (
               <div className="flex items-center gap-2 py-1">
                 <div className="flex gap-0.5 items-end h-4">
                   {[2,4,3,5,3,4,2].map((h, i) => (
                     <span key={i} className="rounded-full bg-fuchsia-400/50"
-                      style={{ width: 2, height: h*2, animation: `bounce ${0.5+i*0.08}s ease-in-out infinite alternate`, animationDelay: `${i*0.1}s` }} />
+                      style={{ width: 2, height: h * 2, animation: `bounce ${0.5 + i * 0.08}s ease-in-out infinite alternate`, animationDelay: `${i * 0.1}s` }} />
                   ))}
                 </div>
                 <span className="text-[12px] text-white/40">Ready — just speak</span>
@@ -552,7 +578,8 @@ VOICE RULES (critical):
             {mode === "thinking" && !reply && (
               <div className="flex items-center gap-2 py-1">
                 {[0,1,2].map(i => (
-                  <span key={i} className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
+                  <span key={i} className="w-2 h-2 rounded-full bg-primary/60 animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }} />
                 ))}
               </div>
             )}
@@ -565,7 +592,6 @@ VOICE RULES (critical):
             )}
           </div>
 
-          {/* Offline queue row */}
           {hasQueue && (
             <div className="border-t border-white/8 px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-orange-400">
@@ -576,87 +602,81 @@ VOICE RULES (critical):
             </div>
           )}
 
-          {/* Cache status */}
           {offline && (
             <div className="border-t border-white/8 px-4 py-2">
-              <p className="text-[10px] text-orange-400/70">
-                Offline mode · {CACHE_MAX} response cache active · queued messages replay on reconnect
-              </p>
+              <p className="text-[10px] text-orange-400/70">Offline mode · cached responses active · queue replays on reconnect</p>
             </div>
           )}
         </div>
       )}
 
-      {/* ── Floating bubble ────────────────────────────────── */}
+      {/* ── Bubble ────────────────────────────────────── */}
       <div className="relative flex flex-col items-center gap-2">
-        {/* Queue badge */}
         {hasQueue && (
           <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 border-2 border-[#0f0f14] flex items-center justify-center z-10">
             <span className="text-[9px] font-bold text-white">{queuedCount > 9 ? "9+" : queuedCount}</span>
           </div>
         )}
 
-        {/* Listening ripples */}
         {mode === "listening" && (
           <>
             <span className="absolute inset-0 rounded-full bg-rose-500/30 animate-ping pointer-events-none" />
-            <span className="absolute -inset-3 rounded-full bg-rose-500/15 animate-ping pointer-events-none" style={{ animationDelay: "0.25s", animationDuration: "1.2s" }} />
+            <span className="absolute -inset-3 rounded-full bg-rose-500/15 animate-ping pointer-events-none"
+              style={{ animationDelay: "0.25s", animationDuration: "1.2s" }} />
           </>
         )}
 
-        {/* Hands-free idle pulse */}
         {handsFree && mode === "idle" && (
           <>
             <span className="absolute inset-0 rounded-full bg-fuchsia-500/20 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
-            <span className="absolute -inset-2 rounded-full bg-fuchsia-500/10 animate-ping pointer-events-none" style={{ animationDuration: "3.5s", animationDelay: "0.5s" }} />
+            <span className="absolute -inset-3 rounded-full bg-fuchsia-500/10 animate-ping pointer-events-none" style={{ animationDuration: "3.5s", animationDelay: "0.5s" }} />
           </>
         )}
 
-        {/* Speaking glow */}
         {mode === "speaking" && (
           <span className="absolute -inset-4 rounded-full bg-emerald-500/20 blur-xl animate-pulse pointer-events-none" />
         )}
 
-        {/* Idle ambient glow */}
         {mode === "idle" && !handsFree && (
-          <span className={cn("absolute -inset-2 rounded-full blur-lg animate-pulse pointer-events-none", offline ? "bg-orange-500/15" : "bg-primary/10")} style={{ animationDuration: "3s" }} />
+          <span className={cn("absolute -inset-2 rounded-full blur-lg animate-pulse pointer-events-none",
+            offline ? "bg-orange-500/15" : "bg-primary/10")} style={{ animationDuration: "3s" }} />
         )}
 
-        {/* Main bubble */}
+        {/* Main bubble — larger on mobile for easy tapping */}
         <button
           onClick={handleBubbleTap}
           disabled={mode === "thinking"}
           title={modeLabel}
           className={cn(
-            "w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+            "w-16 h-16 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40",
             BUBBLE_STYLE[mode]
           )}
         >
-          {mode === "idle"      && (offline ? <WifiOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white drop-shadow" />)}
+          {mode === "idle"      && (offline ? <WifiOff className="w-7 h-7 md:w-6 md:h-6 text-white" /> : <Mic className="w-7 h-7 md:w-6 md:h-6 text-white drop-shadow" />)}
           {mode === "listening" && <WaveBars count={5} heights={[3,5,4,6,3]} />}
           {mode === "thinking"  && <ThinkingDots />}
           {mode === "speaking"  && <WaveBars count={7} heights={[4,6,5,7,5,6,4]} />}
         </button>
 
-        {/* Mode label */}
+        {/* NOVA label */}
         <span className={cn(
-          "text-[9px] font-medium tracking-widest uppercase text-center leading-tight transition-all duration-300",
+          "text-[9px] font-bold tracking-[0.18em] uppercase text-center transition-all duration-300",
           mode === "idle" && offline   ? "text-orange-400"  :
           mode === "idle" && handsFree ? "text-fuchsia-400" :
-          mode === "idle"              ? "text-white/30"    :
+          mode === "idle"              ? "text-white/40"    :
           mode === "listening"         ? "text-rose-400"    :
           mode === "thinking"          ? "text-amber-400/70":
                                          "text-emerald-400"
-        )} style={{ maxWidth: 80 }}>
-          {modeLabel}
+        )}>
+          {ASSISTANT_NAME}
         </span>
 
-        {/* Hands-free toggle pill */}
+        {/* Hands-free toggle */}
         <button
           onClick={toggleHandsFree}
-          title={handsFree ? "Turn off hands-free" : "Turn on hands-free — always listening"}
+          title={handsFree ? "Turn off hands-free" : "Always-on listening — talk from across the room"}
           className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all duration-200 border",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all duration-200 border",
             handsFree
               ? "bg-fuchsia-500/20 border-fuchsia-500/50 text-fuchsia-300 hover:bg-fuchsia-500/30"
               : "bg-white/5 border-white/10 text-white/30 hover:bg-white/10 hover:text-white/60"
