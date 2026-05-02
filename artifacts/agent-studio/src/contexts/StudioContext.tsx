@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   liveCodeFeed: true,
   selfUpgrading: true,
   selectedPlatform: "web",
-  userName: "",
+  userName: "John Thurmond",
   userColor: "#6366f1",
 };
 

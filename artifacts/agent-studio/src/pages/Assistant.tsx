@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useStudio, parseFilesFromText } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import {
-  Send, Trash2, Zap, Bot, User, Copy, Check, ExternalLink,
+  Send, Trash2, Zap, Bot, Copy, Check, ExternalLink,
   MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -128,8 +128,23 @@ function TypingDots() {
   );
 }
 
+function UserAvatar({ name, color }: { name: string; color: string }) {
+  const initials = name.trim()
+    ? name.trim().split(/\s+/).map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    : "JT";
+  return (
+    <div
+      className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold text-white"
+      style={{ background: color || "#6366f1" }}
+    >
+      {initials}
+    </div>
+  );
+}
+
 export default function AssistantPage() {
   const { chatHistory, sendChat, clearChat, startBuild, settings } = useStudio();
+  const firstName = settings.userName.trim().split(/\s+/)[0] || "John";
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [, setLocation] = useLocation();
@@ -197,7 +212,7 @@ export default function AssistantPage() {
               <Bot className="w-8 h-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-semibold">What can I fix for you?</h2>
+              <h2 className="text-lg font-semibold">What can I fix for you, {firstName}?</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
                 I live inside Agent Studio. Tell me what's broken or what you want — I'll fix it right now without you touching any code.
               </p>
@@ -225,15 +240,12 @@ export default function AssistantPage() {
           return (
             <div key={msg.id} className={cn("flex gap-3 slide-up", isUser && "flex-row-reverse")}>
               {/* Avatar */}
-              <div className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                isUser ? "bg-secondary" : "bg-primary/20"
-              )}>
-                {isUser
-                  ? <User className="w-3.5 h-3.5 text-muted-foreground" />
-                  : <Bot className="w-3.5 h-3.5 text-primary" />
-                }
-              </div>
+              {isUser
+                ? <UserAvatar name={settings.userName} color={settings.userColor} />
+                : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[9px] font-bold text-white tracking-widest">N</span>
+                  </div>
+              }
 
               {/* Bubble + actions */}
               <div className={cn("max-w-[82%] space-y-2", isUser && "items-end flex flex-col")}>
