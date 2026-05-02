@@ -10,11 +10,12 @@ import { useLocation } from "wouter";
 import type { AssistantAction } from "@/lib/types";
 
 const SUGGESTIONS = [
-  "The preview button isn't working — can you fix it?",
-  "Make the AI generate better-looking apps",
+  "The preview isn't working — diagnose and fix it",
+  "Make the AI generate better-looking, more polished apps",
   "Add a new template for a social media dashboard",
-  "I want the builds to be faster — what can you do?",
-  "Something feels broken — run a self-check and fix it",
+  "Where do I find my built apps?",
+  "How do I make builds faster?",
+  "Run a self-check on the whole system and fix anything broken",
 ];
 
 const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
@@ -169,13 +170,13 @@ export default function AssistantPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-primary" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shadow-lg shadow-primary/20">
+            <span className="text-[10px] font-bold text-white tracking-widest">N</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold">Agent Studio AI</h1>
+            <h1 className="text-sm font-semibold">NOVA</h1>
             <p className="text-[11px] text-muted-foreground">
-              Self-aware · Fixes Agent Studio instantly · Free via Pollinations{settings.groqKey ? " + Groq" : ""}
+              Self-aware assistant · Fixes Agent Studio instantly{settings.groqKey ? " · Groq active" : " · Free via Pollinations"}
             </p>
           </div>
         </div>

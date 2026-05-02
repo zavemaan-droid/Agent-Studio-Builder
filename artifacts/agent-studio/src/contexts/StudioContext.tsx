@@ -93,6 +93,46 @@ export const INITIAL_MODULES: TrainingModule[] = [
       { id: "testing-strategies", title: "Testing Strategies", description: "Unit tests, integration tests, snapshot testing, and TDD mindset", trained: false },
     ],
   },
+  {
+    id: "api-data", title: "API Integration & Data Fetching", description: "Connect to REST APIs, handle auth, and manage async data",
+    agentLabel: "Builder", color: "#0ea5e9",
+    lessons: [
+      { id: "rest-fetch", title: "REST APIs with Fetch", description: "GET/POST/PUT/DELETE patterns, JSON handling, error states, and loading indicators", trained: false },
+      { id: "auth-headers", title: "Auth Headers & Token Flow", description: "Bearer tokens, API keys in headers, refresh token patterns, and secure storage", trained: false },
+      { id: "async-patterns", title: "Async/Await Patterns", description: "Promise chains, parallel requests with Promise.all, cancellation, and AbortController", trained: false },
+      { id: "error-states", title: "API Error States & UX", description: "HTTP status codes, retry logic, user-friendly error messages, and fallback UI", trained: false },
+    ],
+  },
+  {
+    id: "storage-persistence", title: "Storage & Offline-First", description: "Keep data alive across sessions and make apps work offline",
+    agentLabel: "Builder", color: "#14b8a6",
+    lessons: [
+      { id: "localstorage-patterns", title: "localStorage Patterns", description: "Reading, writing, and serialising complex state — avoiding pitfalls and quota limits", trained: false },
+      { id: "indexeddb", title: "IndexedDB & Large Datasets", description: "Storing blobs, querying indexed data, and using libraries like Dexie.js", trained: false },
+      { id: "service-workers", title: "Service Workers & Cache API", description: "Intercepting fetch, caching strategies (cache-first, network-first), and background sync", trained: false },
+      { id: "sync-conflict", title: "Conflict Resolution & Sync", description: "Last-write-wins, CRDTs, optimistic updates, and merging offline changes on reconnect", trained: false },
+    ],
+  },
+  {
+    id: "ui-ux-design", title: "UI/UX Design Principles", description: "Build interfaces that are beautiful, clear, and accessible",
+    agentLabel: "Designer", color: "#f43f5e",
+    lessons: [
+      { id: "visual-hierarchy", title: "Visual Hierarchy", description: "Size, weight, contrast, and spacing to guide the user's eye to what matters most", trained: false },
+      { id: "color-typography", title: "Color & Typography", description: "Colour theory, readable font pairings, line-height, and brand-consistent palettes", trained: false },
+      { id: "mobile-first", title: "Mobile-First Responsive Design", description: "Touch targets, viewport units, breakpoints, and designing for thumb reach on phones", trained: false },
+      { id: "accessibility", title: "Accessibility (a11y)", description: "ARIA labels, focus management, colour contrast ratios, and screen-reader-friendly markup", trained: false },
+    ],
+  },
+  {
+    id: "pipeline-mastery", title: "Agent Studio Pipeline Mastery", description: "Get the best results from the 5-agent build pipeline",
+    agentLabel: "Architect", color: "#8b5cf6",
+    lessons: [
+      { id: "writing-descriptions", title: "Writing Winning App Descriptions", description: "The exact words that get the Architect to plan the right structure from the first pass", trained: false },
+      { id: "steering-agents", title: "Steering Individual Agents", description: "How to influence Architect, Builder, Designer, QA, and Packager outputs via Memory Bank", trained: false },
+      { id: "self-upgrade-strategy", title: "Self-Upgrade Strategy", description: "When and how to apply Self-Upgrade proposals for the highest-impact improvements", trained: false },
+      { id: "memory-priming", title: "Memory Priming for Builds", description: "Writing auto-include memories that dramatically improve every build without touching code", trained: false },
+    ],
+  },
 ];
 
 // ──────────────────────────────────────────────
@@ -427,7 +467,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     setSettings({ ...DEFAULT_SETTINGS, ...savedSettings });
     setTrainingState(savedTraining);
     setChatHistory(savedChat);
-    setModules(savedModules ?? INITIAL_MODULES);
+    if (savedModules) {
+      const savedIds = new Set(savedModules.map((m: TrainingModule) => m.id));
+      const newMods = INITIAL_MODULES.filter(m => !savedIds.has(m.id));
+      setModules(newMods.length > 0 ? [...savedModules, ...newMods] : savedModules);
+    } else {
+      setModules(INITIAL_MODULES);
+    }
     setAgentPrompts(savedPrompts ? { ...DEFAULT_AGENT_PROMPTS, ...savedPrompts } : { ...DEFAULT_AGENT_PROMPTS });
     setUpgradeHistory(savedHistory);
     setReady(true);
