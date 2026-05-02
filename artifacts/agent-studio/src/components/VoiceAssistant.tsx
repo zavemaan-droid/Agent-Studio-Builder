@@ -133,32 +133,54 @@ function wantsNavigation(text: string): boolean {
   return /\b(take me|go to|show me|navigate|open|where is|find|get to|bring me)\b/.test(lower);
 }
 
-function pickVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
-  const prefer = [
-    "Google UK English Male",
-    "Daniel",
-    "Oliver",
-    "Arthur",
-    "Microsoft George",
-    "Google UK English Female",
-    "Rishi",
-    "Google US English",
-    "Microsoft David",
-    "Microsoft Mark",
-    "Alex",
-    "Samantha",
-  ];
-  for (const name of prefer) {
-    const v = voices.find(v => v.name.includes(name));
+// Best-sounding voices in priority order for JARVIS-style British male.
+// On Android Chrome, localService:false = Google's neural cloud voices (much better).
+const JARVIS_VOICE_PRIORITY = [
+  "Google UK English Male",   // Best on Android Chrome — neural
+  "Daniel",                   // macOS/iOS — deep British
+  "Arthur",                   // macOS Ventura+ — British male
+  "Oliver",                   // macOS — British male
+  "Microsoft George",         // Windows — British
+  "Microsoft Ryan",           // Windows 11 neural British
+  "Microsoft George Online",
+  "Google UK English Female", // fallback — still neural
+  "Rishi",                    // Indian English — better than nothing
+  "Google US English",        // US neural — still far better than Samsung TTS
+  "Microsoft David",
+  "Microsoft Mark",
+  "Alex",
+];
+
+export function getAvailableVoices(): SpeechSynthesisVoice[] {
+  return window.speechSynthesis?.getVoices() ?? [];
+}
+
+function pickVoice(savedName?: string): SpeechSynthesisVoice | null {
+  const voices = getAvailableVoices();
+  if (!voices.length) return null;
+
+  // 1. User's saved preference
+  if (savedName) {
+    const saved = voices.find(v => v.name === savedName);
+    if (saved) return saved;
+  }
+
+  // 2. Priority list — exact or partial match
+  for (const name of JARVIS_VOICE_PRIORITY) {
+    const v = voices.find(v => v.name === name) ?? voices.find(v => v.name.includes(name));
     if (v) return v;
   }
-  return (
-    voices.find(v => v.lang === "en-GB") ??
-    voices.find(v => v.lang.startsWith("en")) ??
-    voices[0] ??
-    null
-  );
+
+  // 3. Any non-local (neural cloud) English voice — best on Android
+  const neural = voices.find(v => !v.localService && v.lang.startsWith("en"));
+  if (neural) return neural;
+
+  // 4. Any en-GB local voice
+  const gb = voices.find(v => v.lang === "en-GB");
+  if (gb) return gb;
+
+  // 5. Any English voice
+  return voices.find(v => v.lang.startsWith("en")) ?? voices[0] ?? null;
 }
 
 function WaveBars({ count = 5, heights }: { count?: number; heights?: number[] }) {
@@ -207,13 +229,31 @@ export function VoiceAssistant() {
   const handsFreeRef   = useRef(handsFree);
   const processingRef  = useRef(false);
   const setLocationRef = useRef(setLocation);
+  // Always-current voice settings ref so speak() closure sees latest values
+  const voiceSettingsRef = useRef({ name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch });
 
   useEffect(() => { modeRef.current = mode; },           [mode]);
   useEffect(() => { handsFreeRef.current = handsFree; }, [handsFree]);
   useEffect(() => { saveData(HANDSFREE_KEY, handsFree); }, [handsFree]);
   useEffect(() => { setLocationRef.current = setLocation; }, [setLocation]);
+  useEffect(() => {
+    voiceSettingsRef.current = { name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch };
+  }, [settings.voiceName, settings.voiceRate, settings.voicePitch]);
 
-  useEffect(() => { if ("speechSynthesis" in window) window.speechSynthesis.getVoices(); }, []);
+  // Warm up voice engine on mount — Android needs this to load neural voices
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const load = () => window.speechSynthesis.getVoices();
+    load();
+    window.speechSynthesis.addEventListener("voiceschanged", load);
+    // Second load after a delay — Android Chrome sometimes loads neural voices late
+    const t = setTimeout(load, 1500);
+    return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", load);
+      clearTimeout(t);
+    };
+  }, []);
+
   useEffect(() => {
     return () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); };
   }, []);
@@ -225,14 +265,17 @@ export function VoiceAssistant() {
       const clean = stripForSpeech(text);
       if (!clean) { setMode("idle"); resolve(); return; }
 
-      const utterance  = new SpeechSynthesisUtterance(clean);
-      utterance.rate   = 1.05;
-      utterance.pitch  = 0.92;
-      utterance.volume = 1.0;
+      const { name, rate, pitch } = voiceSettingsRef.current;
 
       const doSpeak = () => {
-        const voice = pickVoice();
+        const utterance  = new SpeechSynthesisUtterance(clean);
+        utterance.rate   = rate   ?? 0.88;
+        utterance.pitch  = pitch  ?? 0.80;
+        utterance.volume = 1.0;
+
+        const voice = pickVoice(name || undefined);
         if (voice) utterance.voice = voice;
+
         utterance.onstart = () => setMode("speaking");
         utterance.onend   = () => { setMode("idle"); resolve(); };
         utterance.onerror = () => { setMode("idle"); resolve(); };

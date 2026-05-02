@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStudio } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import { pingPollinations } from "@/lib/ai";
 import { saveData, KEYS } from "@/lib/storage";
-import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Circle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Circle, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getAvailableVoices } from "@/components/VoiceAssistant";
 
 type HealthState = "idle" | "checking" | "ok" | "fail";
 
@@ -17,6 +18,52 @@ export default function SettingsPage() {
   });
   const [testing, setTesting] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [testingVoice, setTestingVoice] = useState(false);
+
+  // Load available voices — Android needs a small delay for neural voices
+  useEffect(() => {
+    const load = () => {
+      const v = getAvailableVoices().filter(v => v.lang.startsWith("en"));
+      if (v.length > 0) setVoices(v);
+    };
+    load();
+    window.speechSynthesis?.addEventListener("voiceschanged", load);
+    const t = setTimeout(load, 1200);
+    return () => {
+      window.speechSynthesis?.removeEventListener("voiceschanged", load);
+      clearTimeout(t);
+    };
+  }, []);
+
+  const testVoice = () => {
+    if (!("speechSynthesis" in window) || testingVoice) return;
+    window.speechSynthesis.cancel();
+    setTestingVoice(true);
+    const u = new SpeechSynthesisUtterance(
+      `Good day, ${settings.userName.split(" ")[0] || "sir"}. All systems are fully operational.`
+    );
+    u.rate   = settings.voiceRate;
+    u.pitch  = settings.voicePitch;
+    u.volume = 1.0;
+    if (settings.voiceName) {
+      const v = getAvailableVoices().find(v => v.name === settings.voiceName);
+      if (v) u.voice = v;
+    } else {
+      // Auto-pick best voice same as NOVA does
+      const all = getAvailableVoices();
+      const best = all.find(v => v.name === "Google UK English Male")
+        ?? all.find(v => v.name.includes("Google UK"))
+        ?? all.find(v => !v.localService && v.lang.startsWith("en"))
+        ?? all.find(v => v.lang === "en-GB")
+        ?? all.find(v => v.lang.startsWith("en"))
+        ?? null;
+      if (best) u.voice = best;
+    }
+    u.onend   = () => setTestingVoice(false);
+    u.onerror = () => setTestingVoice(false);
+    window.speechSynthesis.speak(u);
+  };
 
   // Settings save IMMEDIATELY on every change — no local state buffering
   const set = (patch: Partial<typeof settings>) => updateSettings(patch);
@@ -266,6 +313,95 @@ export default function SettingsPage() {
                 </button>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* NOVA Voice */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">NOVA Voice</h2>
+          <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+
+            {/* Voice picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Voice</label>
+              <select
+                value={settings.voiceName}
+                onChange={e => set({ voiceName: e.target.value })}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50 appearance-none"
+              >
+                <option value="">Auto (best available)</option>
+                {voices.map(v => (
+                  <option key={v.name} value={v.name}>
+                    {v.name}{!v.localService ? " ✦" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-muted-foreground">
+                ✦ = neural cloud voice (sounds best) · "Google UK English Male" is closest to JARVIS
+              </p>
+            </div>
+
+            {/* Speed slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs text-muted-foreground">Speed</label>
+                <span className="text-xs font-mono text-foreground">{settings.voiceRate.toFixed(2)}×</span>
+              </div>
+              <input
+                type="range" min="0.5" max="1.4" step="0.02"
+                value={settings.voiceRate}
+                onChange={e => set({ voiceRate: parseFloat(e.target.value) })}
+                className="w-full accent-primary"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Slower</span>
+                <span>JARVIS default: 0.88</span>
+                <span>Faster</span>
+              </div>
+            </div>
+
+            {/* Pitch slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs text-muted-foreground">Pitch</label>
+                <span className="text-xs font-mono text-foreground">{settings.voicePitch.toFixed(2)}</span>
+              </div>
+              <input
+                type="range" min="0.5" max="1.2" step="0.02"
+                value={settings.voicePitch}
+                onChange={e => set({ voicePitch: parseFloat(e.target.value) })}
+                className="w-full accent-primary"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Deeper</span>
+                <span>JARVIS default: 0.80</span>
+                <span>Higher</span>
+              </div>
+            </div>
+
+            {/* Test button + reset */}
+            <div className="flex gap-2 pt-1">
+              <Button
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={testVoice}
+                disabled={testingVoice}
+              >
+                {testingVoice
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Speaking…</>
+                  : <><Volume2 className="w-3.5 h-3.5 mr-1.5" />Test Voice</>
+                }
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs px-3"
+                onClick={() => set({ voiceName: "", voiceRate: 0.88, voicePitch: 0.80 })}
+                title="Reset to JARVIS defaults"
+              >
+                Reset
+              </Button>
+            </div>
           </div>
         </section>
 
