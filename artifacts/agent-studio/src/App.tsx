@@ -2,6 +2,7 @@ import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { Sidebar } from "@/components/Sidebar";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 import AssistantPage from "@/pages/Assistant";
 import StudioPage from "@/pages/Studio";
 import ProjectsPage from "@/pages/Projects";
@@ -46,6 +47,7 @@ function App() {
     <StudioProvider>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <AppLayout />
+        <VoiceAssistant />
       </WouterRouter>
       <Toaster />
     </StudioProvider>
