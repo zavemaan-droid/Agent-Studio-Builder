@@ -1,22 +1,69 @@
 import { useState, useRef, useEffect } from "react";
 import { useStudio, parseFilesFromText } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
-import { Send, Trash2, Zap, Bot, User, Copy, Check, ExternalLink } from "lucide-react";
+import {
+  Send, Trash2, Zap, Bot, User, Copy, Check, ExternalLink,
+  MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import type { AssistantAction } from "@/lib/types";
 
 const SUGGESTIONS = [
-  "Build me a todo app with categories and due dates",
-  "Create an Android calculator app",
-  "I want to make a simple note-taking app",
-  "Build a countdown timer with multiple timers",
-  "Make a budget tracker that works offline",
+  "The preview button isn't working — can you fix it?",
+  "Make the AI generate better-looking apps",
+  "Add a new template for a social media dashboard",
+  "I want the builds to be faster — what can you do?",
+  "Something feels broken — run a self-check and fix it",
 ];
 
-function CodeBlock({ text, projectFiles }: {
-  text: string;
-  projectFiles?: { path: string; content: string }[];
-}) {
+const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
+  addMemory:      <MemoryStick className="w-3.5 h-3.5" />,
+  upgradeAgent:   <Cpu className="w-3.5 h-3.5" />,
+  updateSetting:  <Settings2 className="w-3.5 h-3.5" />,
+  featureRequest: <Star className="w-3.5 h-3.5" />,
+  addTemplate:    <PlusSquare className="w-3.5 h-3.5" />,
+};
+
+const ACTION_COLORS: Record<AssistantAction["type"], string> = {
+  addMemory:      "bg-blue-500/10 border-blue-500/30 text-blue-400",
+  upgradeAgent:   "bg-purple-500/10 border-purple-500/30 text-purple-400",
+  updateSetting:  "bg-orange-500/10 border-orange-500/30 text-orange-400",
+  featureRequest: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400",
+  addTemplate:    "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+};
+
+const ACTION_DEST: Record<AssistantAction["type"], { label: string; path: string }> = {
+  addMemory:      { label: "View in Memory Bank", path: "/memory" },
+  upgradeAgent:   { label: "View in Dashboard", path: "/dashboard" },
+  updateSetting:  { label: "Open Settings", path: "/settings" },
+  featureRequest: { label: "View in Memory Bank", path: "/memory" },
+  addTemplate:    { label: "View in Library", path: "/library" },
+};
+
+function ActionCard({ action }: { action: AssistantAction }) {
+  const [, setLocation] = useLocation();
+  const color = ACTION_COLORS[action.type];
+  const icon = ACTION_ICONS[action.type];
+  const dest = ACTION_DEST[action.type];
+  return (
+    <div className={cn("flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-xs", color)}>
+      <div className="flex items-center gap-2 min-w-0">
+        <CircleCheck className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+        {icon}
+        <span className="truncate font-medium">{action.label}</span>
+      </div>
+      <button
+        onClick={() => setLocation(dest.path)}
+        className="shrink-0 underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity whitespace-nowrap"
+      >
+        {dest.label}
+      </button>
+    </div>
+  );
+}
+
+function CodeBlock({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const files = parseFilesFromText(text);
   if (files.length === 0) return null;
@@ -32,7 +79,9 @@ function CodeBlock({ text, projectFiles }: {
       <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">Generated Files</span>
-          <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">{files.length} file{files.length > 1 ? "s" : ""}</span>
+          <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+            {files.length} file{files.length > 1 ? "s" : ""}
+          </span>
         </div>
         <button onClick={copy} className="text-muted-foreground hover:text-foreground transition-colors">
           {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -56,15 +105,23 @@ function CodeBlock({ text, projectFiles }: {
 }
 
 function formatMessage(text: string): string {
-  // Remove the files block from display text
-  return text.replace(/```files[\s\S]*?```/g, "").trim();
+  // Remove ```fix ... ``` blocks (they're shown as action cards)
+  // Remove ```files ... ``` blocks (they're shown as code cards)
+  return text
+    .replace(/```fix[\s\S]*?```/g, "")
+    .replace(/```files[\s\S]*?```/g, "")
+    .trim();
 }
 
 function TypingDots() {
   return (
     <div className="flex items-center gap-1 px-1 py-0.5">
       {[0, 1, 2].map(i => (
-        <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block" style={{ animationDelay: `${i * 0.2}s` }} />
+        <span
+          key={i}
+          className="typing-dot w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block"
+          style={{ animationDelay: `${i * 0.2}s` }}
+        />
       ))}
     </div>
   );
@@ -102,12 +159,6 @@ export default function AssistantPage() {
     }
   };
 
-  // Detect "start build" intent in assistant messages
-  const detectBuildAction = (content: string) => {
-    const files = parseFilesFromText(content);
-    return files.length > 0;
-  };
-
   const handleStartBuildFromMessage = async (description: string) => {
     const id = await startBuild(description, settings.selectedPlatform);
     setLocation(`/studio?build=${id}`);
@@ -119,17 +170,18 @@ export default function AssistantPage() {
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <Bot className="w-4.5 h-4.5 text-primary" />
+            <Bot className="w-4 h-4 text-primary" />
           </div>
           <div>
             <h1 className="text-sm font-semibold">Agent Studio AI</h1>
-            <p className="text-[11px] text-muted-foreground">Free · Powered by Pollinations{settings.groqKey ? " + Groq" : ""}</p>
+            <p className="text-[11px] text-muted-foreground">
+              Self-aware · Fixes Agent Studio instantly · Free via Pollinations{settings.groqKey ? " + Groq" : ""}
+            </p>
           </div>
         </div>
         <button
           onClick={clearChat}
           className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded hover:bg-destructive/10"
-          data-testid="clear-chat"
           title="Clear chat"
         >
           <Trash2 className="w-4 h-4" />
@@ -144,9 +196,9 @@ export default function AssistantPage() {
               <Bot className="w-8 h-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-semibold">Describe your app</h2>
+              <h2 className="text-lg font-semibold">What can I fix for you?</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Tell me what you want to build. I'll ask a couple questions, then write the code for you — for free.
+                I live inside Agent Studio. Tell me what's broken or what you want — I'll fix it right now without you touching any code.
               </p>
             </div>
             <div className="grid gap-2 w-full max-w-md">
@@ -155,7 +207,6 @@ export default function AssistantPage() {
                   key={i}
                   onClick={() => handleSend(s)}
                   className="text-left text-sm px-4 py-2.5 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-muted-foreground hover:text-foreground"
-                  data-testid={`suggestion-${i}`}
                 >
                   {s}
                 </button>
@@ -167,7 +218,8 @@ export default function AssistantPage() {
         {chatHistory.map((msg) => {
           const isUser = msg.role === "user";
           const displayText = formatMessage(msg.content);
-          const hasFiles = detectBuildAction(msg.content);
+          const hasFiles = parseFilesFromText(msg.content).length > 0;
+          const actions = msg.actions ?? [];
 
           return (
             <div key={msg.id} className={cn("flex gap-3 slide-up", isUser && "flex-row-reverse")}>
@@ -182,23 +234,32 @@ export default function AssistantPage() {
                 }
               </div>
 
-              {/* Bubble */}
-              <div className={cn("max-w-[80%] space-y-1", isUser && "items-end flex flex-col")}>
-                <div className={cn(
-                  "px-3.5 py-2.5 rounded-xl text-sm leading-relaxed",
-                  isUser
-                    ? "bg-primary text-primary-foreground rounded-tr-sm"
-                    : "bg-card border border-border rounded-tl-sm"
-                )}>
-                  {msg.content === "" ? <TypingDots /> : (
-                    <div className="whitespace-pre-wrap break-words">
-                      {displayText}
-                      {!isUser && !sending && msg === chatHistory[chatHistory.length - 1] ? "" : ""}
-                    </div>
-                  )}
-                </div>
+              {/* Bubble + actions */}
+              <div className={cn("max-w-[82%] space-y-2", isUser && "items-end flex flex-col")}>
+                {/* Message bubble */}
+                {(displayText || msg.content === "") && (
+                  <div className={cn(
+                    "px-3.5 py-2.5 rounded-xl text-sm leading-relaxed",
+                    isUser
+                      ? "bg-primary text-primary-foreground rounded-tr-sm"
+                      : "bg-card border border-border rounded-tl-sm"
+                  )}>
+                    {msg.content === "" ? <TypingDots /> : (
+                      <div className="whitespace-pre-wrap break-words">{displayText}</div>
+                    )}
+                  </div>
+                )}
 
-                {/* File output card */}
+                {/* Action confirmation cards */}
+                {!isUser && actions.length > 0 && (
+                  <div className="w-full space-y-1.5">
+                    {actions.map((action, i) => (
+                      <ActionCard key={i} action={action} />
+                    ))}
+                  </div>
+                )}
+
+                {/* File output card (for external app builds) */}
                 {!isUser && hasFiles && (
                   <div className="w-full">
                     <CodeBlock text={msg.content} />
@@ -209,7 +270,6 @@ export default function AssistantPage() {
                         onClick={() => handleStartBuildFromMessage(
                           chatHistory.findLast(m => m.role === "user")?.content ?? ""
                         )}
-                        data-testid="start-build-from-chat"
                       >
                         <Zap className="w-3 h-3 mr-1" />
                         Run Full Build Pipeline
@@ -231,6 +291,7 @@ export default function AssistantPage() {
           );
         })}
 
+        {/* Typing indicator */}
         {sending && chatHistory[chatHistory.length - 1]?.role !== "assistant" && (
           <div className="flex gap-3">
             <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
@@ -253,11 +314,10 @@ export default function AssistantPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe the app you want to build..."
+            placeholder="Tell me what's broken or what you want added..."
             rows={1}
             className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-32 leading-relaxed py-0.5"
             style={{ scrollbarWidth: "none" }}
-            data-testid="chat-input"
           />
           <button
             onClick={() => handleSend()}
@@ -268,13 +328,12 @@ export default function AssistantPage() {
                 ? "bg-primary text-white hover:bg-primary/90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
-            data-testid="send-button"
           >
             <Send className="w-3.5 h-3.5" />
           </button>
         </div>
         <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-          Free via Pollinations AI · Press Enter to send · Shift+Enter for new line
+          Changes apply instantly · No code needed · Enter to send · Shift+Enter for new line
         </p>
       </div>
     </div>

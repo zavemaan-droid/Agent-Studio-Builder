@@ -61,11 +61,19 @@ export interface AppSettings {
   selectedPlatform: Platform;
 }
 
+export interface AssistantAction {
+  type: "addMemory" | "upgradeAgent" | "updateSetting" | "featureRequest" | "addTemplate";
+  label: string;
+  data: Record<string, unknown>;
+  appliedAt: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   ts: number;
+  actions?: AssistantAction[];
 }
 
 export interface UpgradeProposal {
