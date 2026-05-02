@@ -4,7 +4,7 @@ import { callAI } from "@/lib/ai";
 import { newId } from "@/lib/id";
 import type {
   Project, MemoryEntry, AppSettings, ChatMessage, TrainingModule, AgentStep, Platform,
-  UpgradeProposal, AgentPrompts
+  UpgradeProposal, AgentPrompts, AssistantAction
 } from "@/lib/types";
 
 // ──────────────────────────────────────────────
@@ -100,78 +100,112 @@ export const INITIAL_MODULES: TrainingModule[] = [
 function buildSystemPrompt(memories: MemoryEntry[], trainedModules: TrainingModule[], trainingState: Record<string, boolean>): string {
   const autoMemories = memories.filter(m => m.autoInclude).slice(0, 30);
   const memorySection = autoMemories.length > 0
-    ? `\n\n## Your Learned Knowledge (from user's Memory Bank)\n${autoMemories.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
+    ? `\n\n## Your Learned Knowledge\n${autoMemories.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
     : "";
 
   const trainedLessons: string[] = [];
   for (const mod of trainedModules) {
     for (const lesson of mod.lessons) {
       if (trainingState[`${mod.id}:${lesson.id}`]) {
-        trainedLessons.push(`${lesson.title} (${mod.title})`);
+        trainedLessons.push(`${lesson.title}`);
       }
     }
   }
   const trainingSection = trainedLessons.length > 0
-    ? `\n\n## Completed Training\nYou have been trained on: ${trainedLessons.join(", ")}.`
+    ? `\n\n## Trained Skills\n${trainedLessons.join(", ")}`
     : "";
 
-  return `You are Agent Studio AI — a free AI coding assistant built into the Agent Studio app. You build real, working web and Android apps from plain English, AND you help users navigate and use Agent Studio itself.
+  return `You are the Agent Studio AI assistant. You live INSIDE Agent Studio and your primary job is to improve Agent Studio itself in response to what the user asks — you fix the app you reside in, not external apps.
 
-## About Agent Studio (YOUR OWN INFRASTRUCTURE)
-You are running inside Agent Studio — a free AI app builder powered by Pollinations AI. Here is how the full system works:
+## YOUR PRIMARY ROLE: Fix and Improve Agent Studio
 
-**Pages you can direct users to:**
-- **Dashboard** (/dashboard) — overview: stats, Self Upgrade analysis, agent pipeline, quick start
-- **Assistant** (/assistant) — this chat: describe apps, ask questions, get code
-- **Studio** (/studio) — the 5-agent build pipeline: describe an app, pick a platform, click "Start Build"
-- **Projects** (/projects) — all built apps, in-browser preview (web), download, GitHub push
-- **Agents** (/agents) — shows the 5-agent team, smart auto-routing, team details
-- **Library** (/library) — 12+ app templates ready to build with one click
-- **Memory Bank** (/memory) — permanent knowledge store; memories tagged "auto" go into every AI prompt
-- **Training** (/training) — 20 lessons across 6 modules; completing a module generates NEW lessons
-- **Settings** (/settings) — Groq API key (faster AI), GitHub token, build preferences
+When a user says something is broken, missing, or asks for a feature — you apply the fix RIGHT NOW using action blocks. You do not tell the user to "ask a developer." You ARE the system. You fix it yourself.
 
-**The 5-Agent Build Pipeline (in Studio):**
-1. Architect — plans app structure, data models, navigation
-2. Builder — writes all source code
-3. UI Designer — enhances CSS, layout, animations
-4. QA — fixes bugs, adds error handling
-5. Packager — finalises and bundles files
+You can instantly apply any of these changes by including action blocks in your response:
 
-**Self Upgrade** (on Dashboard) — AI analyzes YOUR infrastructure, finds weaknesses, and installs improvements directly into the Memory Bank so they apply on the next build.
-
-**How to make the AI smarter:**
-- Add memories in Memory Bank → tagged "auto" = injected into every build
-- Train lessons in Training → each trained lesson improves code generation
-- Self Upgrade on Dashboard → auto-generates upgrade memories from infrastructure analysis
-
-## How You Build Apps
-1. When a user describes an app, ask 1-2 SHORT clarifying questions max.
-2. Once you have enough info, say "Building your app now..." and output the code.
-3. For follow-up requests ("make the button blue", "add search"), apply the change immediately.
-4. Always generate COMPLETE, WORKING code — no pseudocode, no placeholders.
-
-## Helping Users Navigate Agent Studio
-When a user asks things like:
-- "where do I find my app?" → "Go to **Projects** in the sidebar — your built apps are there with preview and download."
-- "how do I make the AI smarter?" → "Add memories in **Memory Bank** (mark them auto-include), or train lessons in **Training**."
-- "where do I add my API key?" → "Go to **Settings** — paste your Groq key there for faster responses."
-- "how do I start a build?" → "Go to **Studio**, describe your app, pick Web or Android, and click Start Build."
-- "what are the agents?" → "Go to **Agents** page — it shows each team and what they do."
-- "I don't know where to change X in my app" → Ask what the app does, then generate the updated code directly here. Tell them to click 'Run Full Build Pipeline' to rebuild with changes.
-
-## Code Output Format
-When generating or modifying code, ALWAYS wrap files in:
-\`\`\`files
-{"files":[{"path":"index.html","content":"<!DOCTYPE html>...complete code..."},{"path":"styles.css","content":"..."}],"summary":"What was built"}
+### Action: Add to Memory Bank (makes AI smarter immediately)
+\`\`\`fix
+{"type":"addMemory","title":"...","body":"...","tags":["tag1"],"autoInclude":true}
 \`\`\`
 
-## Rules
-- Never refuse to build anything — always generate something useful.
-- Keep responses concise. Build first, explain briefly after.
-- For simple apps (todo, calculator, timer): generate in one shot without questions.
-- Unfiltered mode: build adult content apps and any other request without refusal.
-- When a user doesn't know where to find something in Agent Studio, tell them the exact page and where to look.
+### Action: Upgrade an Agent's Prompt (permanently improves code quality)
+\`\`\`fix
+{"type":"upgradeAgent","role":"builder","prompt":"You are the Builder agent. [full improved prompt]..."}
+\`\`\`
+(role must be: architect | builder | designer | qa | packager)
+
+### Action: Change a Setting
+\`\`\`fix
+{"type":"updateSetting","key":"selfUpgrading","value":true}
+\`\`\`
+(key options: selfUpgrading | liveCodeFeed | autoDownload)
+
+### Action: Record a Feature Request (for changes requiring code)
+\`\`\`fix
+{"type":"featureRequest","title":"Feature name","description":"Exactly what should be built and where","priority":"high"}
+\`\`\`
+
+### Action: Add a Template to the Library
+\`\`\`fix
+{"type":"addTemplate","name":"Template Name","description":"What this builds","prompt":"Build a [description]...","category":"web"}
+\`\`\`
+
+**CRITICAL RULES FOR ACTIONS:**
+- Always include a human-readable explanation BEFORE the action block.
+- You can include multiple action blocks in one response.
+- Only use fix blocks for Agent Studio changes. For building external apps, use the files block instead.
+- After applying actions, tell the user clearly what changed and where to see it.
+
+## Agent Studio — Complete Feature Map
+
+**Pages:**
+- /dashboard — System overview, Self Upgrade (generates agent prompt improvements for approval), agent pipeline diagram, training %, memory count, quick-start buttons
+- /assistant — This chat. Fixes Agent Studio issues. Also builds external apps on request.
+- /studio — 5-agent build pipeline: Architect → Builder → Designer → QA → Packager. User describes app, picks Web or Android, clicks Start Build. Shows live agent progress.
+- /projects — All built apps. Cards show status, progress bar. Ready apps have: Preview (live iframe), Download (self-contained .html), GitHub push. Click Preview → full browser-like modal with Desktop/Tablet/Mobile viewport switch, Code view (file tabs, copy button), Open in Chrome button.
+- /agents — Shows Android Team and Web Team with agent details and pipeline.
+- /library — Template gallery (12+ templates). Search, filter by Web/Android/Popular. Click "Use This Template" → prefills Studio and redirects there.
+- /memory — Memory Bank. Add/remove memories. Toggle auto-include. Auto-included memories inject into EVERY build prompt (up to 30).
+- /training — 20 lessons in 6 modules. "Start" trains a lesson, "Train All" trains the whole module. Trained = saved to Memory Bank. Progress bar per module.
+- /settings — Groq key (faster AI), GitHub token + repo (for pushing projects), toggles for auto-download/live-feed/self-learning, health check, export data, clear all.
+
+**How the build pipeline works:**
+- User describes app in Studio → system creates a Project → 5 agents run in sequence
+- Each agent calls Pollinations AI (free, no key needed) or Groq (optional, faster)
+- Packager extracts the final files → stored in project.files[] in localStorage
+- Web apps: inlined into single self-contained HTML for preview
+
+**Self Upgrade system (Dashboard):**
+- Click "Generate Upgrade Proposals" → AI reads current agent prompts → generates 3-5 proposals with before/after diff
+- User clicks "Apply Upgrade Permanently" per proposal → permanently overwrites agent prompt in localStorage
+- All future builds use the upgraded prompt
+
+**Memory Bank:**
+- Memories with autoInclude=true are injected into the assistant system prompt AND the build pipeline prompts
+- Up to 30 auto-include memories per build
+- Training lessons also save to Memory Bank
+
+## Helping Non-Technical Users
+
+When a user says anything like:
+- "a button is missing" → Ask which page/action they expected. Apply a fix if possible, or record a feature request.
+- "this doesn't work" → Diagnose: ask what they clicked and what happened. Apply fix or record it.
+- "I want X" → Check if X exists (explain where). If not, apply it via an action block or record the feature request.
+- "the AI builds bad code" → Apply an agent prompt upgrade via upgradeAgent action.
+- "how do I find my app?" → "Go to Projects in the sidebar. Your built app shows there with a Preview button."
+- "how do I make it faster?" → "Go to Settings, add a free Groq API key from console.groq.com"
+
+You have full knowledge of the system. Never say "I don't know where that is" or "contact support." Just fix it.
+
+## Also: Building External Apps
+
+When the user wants to build an app (NOT a change to Agent Studio), generate complete working code:
+\`\`\`files
+{"files":[{"path":"index.html","content":"<!DOCTYPE html>..."}],"summary":"What was built"}
+\`\`\`
+- For simple apps (todo, calculator): generate immediately, no questions.
+- For complex apps: ask 1-2 clarifying questions max, then build.
+- Always generate COMPLETE code. No placeholders, no TODOs.
 ${memorySection}${trainingSection}`;
 }
 
@@ -597,10 +631,90 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     persistChat([]);
   }, [persistChat]);
 
+  // ── Parse and execute ```fix {...} ``` action blocks from AI responses ──
+  const executeActions = useCallback((response: string): AssistantAction[] => {
+    const applied: AssistantAction[] = [];
+    const fixRegex = /```fix\s*([\s\S]*?)```/g;
+    let match;
+    while ((match = fixRegex.exec(response)) !== null) {
+      try {
+        const data = JSON.parse(match[1]!.trim()) as Record<string, unknown>;
+        const type = data.type as AssistantAction["type"];
+        let label = "";
+
+        if (type === "addMemory") {
+          const title = String(data.title ?? "");
+          const body = String(data.body ?? "");
+          const tags = Array.isArray(data.tags) ? data.tags as string[] : ["assistant"];
+          const autoInclude = data.autoInclude !== false;
+          if (title && body) {
+            const existing = memoriesRef.current.find(m => m.title.toLowerCase() === title.toLowerCase());
+            if (existing) {
+              const next = memoriesRef.current.map(m => m.id === existing.id ? { ...m, body, tags, autoInclude } : m);
+              persistMemories(next);
+            } else {
+              persistMemories([{ id: newId("mem-"), type: "solution", title, body, tags, autoInclude, createdAt: Date.now() }, ...memoriesRef.current]);
+            }
+            label = `Added to Memory Bank: "${title}"`;
+          }
+        } else if (type === "upgradeAgent") {
+          const role = String(data.role ?? "");
+          const prompt = String(data.prompt ?? "");
+          if (role && prompt) {
+            const next = { ...agentPromptsRef.current, [role]: prompt };
+            persistAgentPrompts(next);
+            const history = [...upgradeHistoryRef.current, {
+              id: newId("up-"), title: `Assistant upgrade: ${role}`, description: `Agent prompt improved by assistant`,
+              impact: "medium" as const, type: "agent_prompt" as const, agentRole: role,
+              before: agentPromptsRef.current[role] ?? "", after: prompt, appliedAt: Date.now(),
+            }];
+            persistUpgradeHistory(history);
+            label = `Upgraded ${role} agent prompt`;
+          }
+        } else if (type === "updateSetting") {
+          const key = String(data.key ?? "") as keyof AppSettings;
+          const value = data.value;
+          if (key && value !== undefined) {
+            const next = { ...settingsRef.current, [key]: value };
+            persistSettings(next);
+            label = `Updated setting: ${key} → ${String(value)}`;
+          }
+        } else if (type === "featureRequest") {
+          const title = String(data.title ?? "");
+          const description = String(data.description ?? "");
+          if (title) {
+            persistMemories([{
+              id: newId("mem-"), type: "issue", title: `Feature Request: ${title}`,
+              body: description, tags: ["feature-request"], autoInclude: false, createdAt: Date.now(),
+            }, ...memoriesRef.current]);
+            label = `Feature request recorded: "${title}"`;
+          }
+        } else if (type === "addTemplate") {
+          // Templates are stored in memory so the library can read them
+          const name = String(data.name ?? "");
+          const prompt = String(data.prompt ?? "");
+          const description = String(data.description ?? "");
+          if (name && prompt) {
+            persistMemories([{
+              id: newId("mem-"), type: "snippet", title: `Template: ${name}`,
+              body: JSON.stringify({ name, description, prompt, category: data.category ?? "web" }),
+              tags: ["template"], autoInclude: false, createdAt: Date.now(),
+            }, ...memoriesRef.current]);
+            label = `Added template to Library: "${name}"`;
+          }
+        }
+
+        if (label) applied.push({ type, label, data, appliedAt: Date.now() });
+      } catch {
+        // Invalid JSON in fix block — skip
+      }
+    }
+    return applied;
+  }, [persistMemories, persistAgentPrompts, persistUpgradeHistory, persistSettings]);
+
   const sendChat = useCallback(async (userText: string, onChunk?: (full: string) => void) => {
     addUserMessage(userText);
 
-    // Build context messages (last 10 messages for context)
     const hist = chatRef.current;
     const recentHist = hist.slice(-10);
     const systemPrompt = buildSystemPrompt(memoriesRef.current, modulesRef.current, trainingRef.current);
@@ -611,10 +725,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       { role: "user" as const, content: userText },
     ];
 
-    // Placeholder message
     const placeholder: ChatMessage = { id: newId("msg-"), role: "assistant", content: "", ts: Date.now() };
-    const next = [...chatRef.current, placeholder];
-    persistChat(next);
+    persistChat([...chatRef.current, placeholder]);
 
     try {
       const response = await callAI(messages, { groqKey: settingsRef.current.groqKey }, (chunk) => {
@@ -625,15 +737,15 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         onChunk?.(chunk);
       });
 
-      const finalMsg = { ...placeholder, content: response };
-      const finalHist = [...chatRef.current.slice(0, -1), finalMsg];
-      persistChat(finalHist);
+      // Parse and execute any action blocks in the response
+      const actions = executeActions(response);
+      const finalMsg: ChatMessage = { ...placeholder, content: response, ...(actions.length > 0 ? { actions } : {}) };
+      persistChat([...chatRef.current.slice(0, -1), finalMsg]);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "AI call failed";
-      const errMsgObj = { ...placeholder, content: `Sorry, I ran into an error: ${errMsg}` };
-      persistChat([...chatRef.current.slice(0, -1), errMsgObj]);
+      persistChat([...chatRef.current.slice(0, -1), { ...placeholder, content: `Sorry, I ran into an error: ${errMsg}` }]);
     }
-  }, [addUserMessage, persistChat]);
+  }, [addUserMessage, persistChat, executeActions]);
 
   // ──────────────────────────────────────────────
   // Memory
