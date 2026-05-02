@@ -1,16 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useStudio } from "@/contexts/StudioContext";
 import { callAI } from "@/lib/ai";
 import { loadData, saveData } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { Mic, X, ChevronDown, WifiOff, Clock, Ear } from "lucide-react";
+import { Mic, X, ChevronDown, WifiOff, Clock, Ear, Navigation } from "lucide-react";
 
-// ── Assistant name ───────────────────────────────────────────
 const ASSISTANT_NAME = "NOVA";
 
 type VoiceMode = "idle" | "listening" | "thinking" | "speaking";
 
-// ── Storage keys ─────────────────────────────────────────────
 const QUEUE_KEY     = "voice-queue";
 const CACHE_KEY     = "voice-cache";
 const HANDSFREE_KEY = "voice-handsfree";
@@ -19,35 +18,39 @@ const CACHE_TTL_MS  = 48 * 60 * 60 * 1000;
 
 interface QueueItem  { id: string; text: string; queuedAt: number; }
 interface CacheEntry { response: string; cachedAt: number; }
+interface NavLink    { label: string; path: string; }
 
-// ── Pre-seeded offline knowledge ─────────────────────────────
 const SEED_CACHE: Record<string, string> = {
   "what can you do":     "I can build web and Android apps from plain English, manage your projects, improve my own build agents, and answer anything about Agent Studio — all without you writing code.",
   "who are you":         `I'm ${ASSISTANT_NAME}, your personal AI assistant inside Agent Studio. Think of me as the intelligence behind the whole system.`,
   "what are you":        `I'm ${ASSISTANT_NAME}, your personal AI assistant inside Agent Studio. Think of me as the intelligence behind the whole system.`,
   "your name":           `I'm ${ASSISTANT_NAME}. Neural Operations and Voice Assistant — built into Agent Studio.`,
   "what is your name":   `My name is ${ASSISTANT_NAME}. I'm your personal voice assistant for Agent Studio.`,
-  "how do i build":      "Head to Studio in the sidebar or tap Build in the bottom nav, describe your app, pick Web or Android, and hit Start Build. Five AI agents write the code.",
+  "how do i build":      "Head to Studio in the bottom nav, describe your app, pick Web or Android, and hit Start Build. Five AI agents write the code.",
   "build an app":        "Head to Studio, describe your app in plain English, pick Web or Android, and hit Start Build. Five AI agents handle the rest.",
   "where are my projects": "Your built apps are all in Projects. Each one has a live Preview, Download, and GitHub push button.",
-  "how do i make you smarter": "Add memories in Memory Bank with auto-include enabled, and they'll be injected into every build. Or run Self Upgrade on the Dashboard to permanently improve my build pipeline.",
-  "self upgrade":        "Self Upgrade reads my current agent prompts, finds weaknesses, and proposes specific improvements. You approve or skip each — approved changes are written permanently into how I build apps.",
+  "how do i make you smarter": "Add memories in Memory Bank with auto-include enabled. Or run Self Upgrade on the Dashboard to permanently improve my build pipeline.",
+  "self upgrade":        "Self Upgrade reads my current agent prompts, finds weaknesses, and proposes improvements. You approve each — approved changes are written permanently into how I build apps.",
   "what agents":         "Five agents: Architect plans structure, Builder writes code, UI Designer polishes the look, QA hunts bugs, and Packager wraps it all up.",
-  "training":            "Training has lessons organized into modules. Each completed lesson gets saved to Memory Bank and makes future builds smarter.",
+  "training":            "Training has lessons organised into modules. Each completed lesson saves to Memory Bank and makes future builds sharper.",
   "memory bank":         "Memory Bank is permanent knowledge storage. Auto-include memories are injected into every build prompt — the more you add, the sharper I get.",
-  "api key":             "Go to Settings and paste your Groq API key for faster responses. GitHub token is also there to push apps directly to your repo.",
-  "offline":             "I'm offline right now, but I have cached knowledge about Agent Studio so I can still help with questions. Complex build requests will queue and process once you're reconnected.",
+  "api key":             "Go to Settings and paste your Groq API key for faster responses. GitHub token is also there for pushing apps to your repo.",
+  "offline":             "I'm offline right now, but I have cached knowledge about Agent Studio so I can still help. Complex build requests will queue and process once you're reconnected.",
   "can you hear me":     "Loud and clear. In hands-free mode I'm always listening — just speak naturally.",
-  "hands free":          "Hands-free mode keeps me listening continuously. After I respond, I automatically restart so you can talk from across the room without touching anything.",
+  "hands free":          "Hands-free mode keeps me listening continuously. After I respond, I automatically restart so you can talk from across the room.",
   "stop listening":      "Turning off hands-free mode now. Tap the mic whenever you need me.",
   "hello":               "Hey — what do you need?",
   "hey":                 "What's up?",
   "hi":                  "Hi there. What can I help with?",
   "hey nova":            "Right here. What do you need?",
   "nova":                "I'm listening.",
+  "where is the dashboard": "The Dashboard is the home screen. It shows your build stats, self-upgrade controls, and quick-start buttons.",
+  "where is studio":     "Studio is in the bottom nav — it's where you describe your app and start a build.",
+  "where is settings":   "Settings is in the bottom nav. That's where you add your Groq API key and GitHub token.",
+  "take me to":          "Navigating there now.",
+  "go to":               "On my way.",
 };
 
-// ── Cache helpers ─────────────────────────────────────────────
 function cacheKey(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim().slice(0, 100);
 }
@@ -79,11 +82,9 @@ function setCached(text: string, response: string): void {
   writeCache(cache);
 }
 
-// ── Queue helpers ─────────────────────────────────────────────
 function readQueue(): QueueItem[]         { return loadData<QueueItem[]>(QUEUE_KEY, []); }
 function writeQueue(q: QueueItem[]): void { saveData(QUEUE_KEY, q); }
 
-// ── Speech helpers ────────────────────────────────────────────
 function stripForSpeech(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, "")
@@ -100,36 +101,58 @@ function stripForSpeech(text: string): string {
     .trim();
 }
 
-/**
- * Pick the best available voice — targeting a formal British male sound
- * closest to the JARVIS/Iron Man style. On Android Chrome this will be
- * "Google UK English Male"; on macOS it will be "Daniel".
- */
+// ── Navigation intent detection ───────────────────────────────
+const PAGE_PATTERNS: { keywords: string[]; path: string; label: string }[] = [
+  { keywords: ["dashboard", "home screen", "overview", "start screen"],       path: "/dashboard",  label: "Dashboard" },
+  { keywords: ["studio", "start build", "build studio", "build an app"],      path: "/studio",     label: "Studio" },
+  { keywords: ["projects", "built apps", "my apps", "your apps", "built app", "finished app"], path: "/projects", label: "Projects" },
+  { keywords: ["assistant", "chat", "nova chat"],                             path: "/assistant",  label: "Assistant" },
+  { keywords: ["memory bank", "memories", "memory"],                          path: "/memory",     label: "Memory Bank" },
+  { keywords: ["training", "lessons", "modules", "learn"],                    path: "/training",   label: "Training" },
+  { keywords: ["settings", "groq key", "github token", "api key", "configuration"], path: "/settings", label: "Settings" },
+  { keywords: ["agents", "agent pipeline", "build pipeline"],                 path: "/agents",     label: "Agents" },
+  { keywords: ["library", "templates", "template"],                           path: "/library",    label: "Library" },
+];
+
+function detectNavIntents(text: string): NavLink[] {
+  const lower = text.toLowerCase();
+  const found: NavLink[] = [];
+  for (const page of PAGE_PATTERNS) {
+    if (page.keywords.some(k => lower.includes(k))) {
+      if (!found.some(f => f.path === page.path)) {
+        found.push({ label: page.label, path: page.path });
+      }
+    }
+    if (found.length >= 2) break;
+  }
+  return found;
+}
+
+function wantsNavigation(text: string): boolean {
+  const lower = text.toLowerCase();
+  return /\b(take me|go to|show me|navigate|open|where is|find|get to|bring me)\b/.test(lower);
+}
+
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
-
-  // Ordered preference — British male first, then any good English voice
   const prefer = [
     "Google UK English Male",
-    "Daniel",          // macOS / iOS British male
-    "Oliver",          // some Windows British male
-    "Arthur",          // Microsoft British male
+    "Daniel",
+    "Oliver",
+    "Arthur",
     "Microsoft George",
     "Google UK English Female",
-    "Rishi",           // Indian English male (neutral accent)
+    "Rishi",
     "Google US English",
     "Microsoft David",
     "Microsoft Mark",
-    "Alex",            // macOS default
+    "Alex",
     "Samantha",
   ];
-
   for (const name of prefer) {
     const v = voices.find(v => v.name.includes(name));
     if (v) return v;
   }
-
-  // Fallback: any en-GB voice, then any en- voice, then anything
   return (
     voices.find(v => v.lang === "en-GB") ??
     voices.find(v => v.lang.startsWith("en")) ??
@@ -138,7 +161,6 @@ function pickVoice(): SpeechSynthesisVoice | null {
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────
 function WaveBars({ count = 5, heights }: { count?: number; heights?: number[] }) {
   const h = heights ?? [3, 5, 4, 6, 3];
   return (
@@ -164,13 +186,14 @@ function ThinkingDots() {
   );
 }
 
-// ── Main component ────────────────────────────────────────────
 export function VoiceAssistant() {
   const { settings, addUserMessage, addAssistantMessage, memories } = useStudio();
+  const [, setLocation] = useLocation();
 
   const [mode,        setMode]        = useState<VoiceMode>("idle");
   const [transcript,  setTranscript]  = useState("");
   const [reply,       setReply]       = useState("");
+  const [navLinks,    setNavLinks]    = useState<NavLink[]>([]);
   const [cardVisible, setCardVisible] = useState(false);
   const [minimized,   setMinimized]   = useState(false);
   const [isOnline,    setIsOnline]    = useState(navigator.onLine);
@@ -183,17 +206,18 @@ export function VoiceAssistant() {
   const modeRef        = useRef<VoiceMode>("idle");
   const handsFreeRef   = useRef(handsFree);
   const processingRef  = useRef(false);
+  const setLocationRef = useRef(setLocation);
 
   useEffect(() => { modeRef.current = mode; },           [mode]);
   useEffect(() => { handsFreeRef.current = handsFree; }, [handsFree]);
   useEffect(() => { saveData(HANDSFREE_KEY, handsFree); }, [handsFree]);
+  useEffect(() => { setLocationRef.current = setLocation; }, [setLocation]);
 
   useEffect(() => { if ("speechSynthesis" in window) window.speechSynthesis.getVoices(); }, []);
   useEffect(() => {
     return () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); };
   }, []);
 
-  // ── speak() ───────────────────────────────────────────────
   const speak = useCallback((text: string): Promise<void> => {
     return new Promise(resolve => {
       if (!("speechSynthesis" in window)) { setMode("idle"); resolve(); return; }
@@ -202,8 +226,8 @@ export function VoiceAssistant() {
       if (!clean) { setMode("idle"); resolve(); return; }
 
       const utterance  = new SpeechSynthesisUtterance(clean);
-      utterance.rate   = 1.05;   // Slightly measured — JARVIS-like deliberate pace
-      utterance.pitch  = 0.92;   // Slightly deeper
+      utterance.rate   = 1.05;
+      utterance.pitch  = 0.92;
       utterance.volume = 1.0;
 
       const doSpeak = () => {
@@ -221,7 +245,6 @@ export function VoiceAssistant() {
     });
   }, []);
 
-  // ── startListening() ─────────────────────────────────────
   const startListening = useCallback(() => {
     const SRClass =
       (window as unknown as Record<string, unknown>)["SpeechRecognition"] as typeof SpeechRecognition | undefined ??
@@ -237,6 +260,7 @@ export function VoiceAssistant() {
     transcriptRef.current = "";
     setTranscript("");
     setReply("");
+    setNavLinks([]);
     setMode("listening");
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
@@ -261,7 +285,6 @@ export function VoiceAssistant() {
     recognition.start();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── System prompt ─────────────────────────────────────────
   const buildPrompt = useCallback(() => {
     const name     = settings.userName.trim();
     const autoMems = memories.filter(m => m.autoInclude).slice(0, 10);
@@ -274,12 +297,13 @@ VOICE RULES (critical — you are speaking aloud):
 - Respond in 1 to 3 spoken sentences max. Never longer.
 - No markdown. No bullets. No code. Pure natural speech.
 - Sound like a trusted expert, not a chatbot. Composed and confident.
-- If asked about Agent Studio features, give the precise answer directly.
-- If asked to do something, confirm it crisply and say what you're doing.
-- Never say "I cannot." Always find a path.${ctx}`;
+- If asked about Agent Studio features, give the precise answer directly — including which section to find it in.
+- If asked to go somewhere or find something, confirm you're taking them there.
+- Never say "I cannot." Always find a path.
+
+NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studio (build apps), Projects (view built apps), Assistant (chat with NOVA), Memory Bank (knowledge storage), Training (skill modules), Settings (keys and config), Agents (pipeline view), Library (app templates). When you mention a section by name, users can tap a button to go there.${ctx}`;
   }, [settings, memories]);
 
-  // ── AI call with cache ────────────────────────────────────
   const askAI = useCallback(async (text: string): Promise<string> => {
     const cached = getCached(text);
     if (cached) return cached;
@@ -291,7 +315,6 @@ VOICE RULES (critical — you are speaking aloud):
     return raw;
   }, [buildPrompt, settings.groqKey]);
 
-  // ── handleRecognitionEnd (via ref so closure stays fresh) ─
   const handleRecognitionEndRef = useRef(async () => {});
 
   const handleRecognitionEnd = useCallback(async () => {
@@ -305,6 +328,7 @@ VOICE RULES (critical — you are speaking aloud):
     }
 
     setMode("thinking");
+    const wantsNav = wantsNavigation(text);
 
     // OFFLINE PATH
     if (!navigator.onLine) {
@@ -312,8 +336,13 @@ VOICE RULES (critical — you are speaking aloud):
       if (cached) {
         const clean = stripForSpeech(cached);
         setReply(clean);
+        const links = detectNavIntents(cached + " " + text);
+        setNavLinks(links);
         addUserMessage(text);
         addAssistantMessage(cached);
+        if (wantsNav && links.length === 1) {
+          setTimeout(() => setLocationRef.current(links[0]!.path), 1800);
+        }
         await speak(clean);
       } else {
         const item: QueueItem = { id: `vq-${Date.now()}`, text, queuedAt: Date.now() };
@@ -335,12 +364,24 @@ VOICE RULES (critical — you are speaking aloud):
       const clean = stripForSpeech(raw);
       setReply(clean);
       addAssistantMessage(raw);
+
+      // Detect nav intents from both the user's request and NOVA's reply
+      const links = detectNavIntents(raw + " " + text);
+      setNavLinks(links);
+
+      // Auto-navigate if the user explicitly asked to go somewhere and there's exactly one clear destination
+      if (wantsNav && links.length === 1) {
+        setTimeout(() => setLocationRef.current(links[0]!.path), 1800);
+      }
+
       await speak(clean);
     } catch {
       const fallback = getCached(text);
       if (fallback) {
         const clean = stripForSpeech(fallback);
         setReply(clean);
+        const links = detectNavIntents(fallback + " " + text);
+        setNavLinks(links);
         await speak(`Connectivity issue — but I have this one. ${clean}`);
       } else {
         const item: QueueItem = { id: `vq-${Date.now()}`, text, queuedAt: Date.now() };
@@ -358,7 +399,6 @@ VOICE RULES (critical — you are speaking aloud):
 
   useEffect(() => { handleRecognitionEndRef.current = handleRecognitionEnd; }, [handleRecognitionEnd]);
 
-  // ── Process offline queue ─────────────────────────────────
   const processQueue = useCallback(async (currentQueue: QueueItem[]) => {
     if (processingRef.current || currentQueue.length === 0) return;
     processingRef.current = true;
@@ -381,12 +421,14 @@ VOICE RULES (critical — you are speaking aloud):
       setQueueStatus(`Message ${i + 1} of ${total}…`);
       setTranscript(item.text);
       setReply("");
+      setNavLinks([]);
       setMode("thinking");
       try {
         addUserMessage(item.text);
         const raw   = await askAI(item.text);
         const clean = stripForSpeech(raw);
         setReply(clean);
+        setNavLinks(detectNavIntents(raw + " " + item.text));
         addAssistantMessage(raw);
         await speak(clean);
       } catch {
@@ -404,7 +446,6 @@ VOICE RULES (critical — you are speaking aloud):
     if (handsFreeRef.current) setTimeout(startListening, 800);
   }, [speak, askAI, addUserMessage, addAssistantMessage, settings.userName, startListening]);
 
-  // ── Online / Offline events ───────────────────────────────
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -428,7 +469,6 @@ VOICE RULES (critical — you are speaking aloud):
     };
   }, [processQueue, speak, settings.userName]);
 
-  // Drain queue on first load
   useEffect(() => {
     if (navigator.onLine) {
       const q = readQueue();
@@ -436,7 +476,6 @@ VOICE RULES (critical — you are speaking aloud):
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Activate hands-free on toggle
   useEffect(() => {
     if (handsFree && modeRef.current === "idle") {
       setCardVisible(true);
@@ -446,7 +485,6 @@ VOICE RULES (critical — you are speaking aloud):
     if (!handsFree) recognitionRef.current?.stop();
   }, [handsFree, startListening]);
 
-  // ── Bubble tap ────────────────────────────────────────────
   const handleBubbleTap = useCallback(() => {
     const current = modeRef.current;
     if (current === "speaking") {
@@ -463,10 +501,10 @@ VOICE RULES (critical — you are speaking aloud):
     if (current === "thinking") return;
     setCardVisible(true);
     setMinimized(false);
+    setNavLinks([]);
     startListening();
   }, [startListening]);
 
-  // ── Toggle hands-free ─────────────────────────────────────
   const toggleHandsFree = useCallback(() => {
     const next = !handsFreeRef.current;
     setHandsFree(next);
@@ -490,7 +528,11 @@ VOICE RULES (critical — you are speaking aloud):
 
   const clearQueue = useCallback(() => { writeQueue([]); setQueue([]); }, []);
 
-  // ── Derived ───────────────────────────────────────────────
+  const handleNavTap = useCallback((link: NavLink) => {
+    setNavLinks([]);
+    setLocationRef.current(link.path);
+  }, []);
+
   const offline     = !isOnline;
   const queuedCount = queue.length;
   const hasQueue    = queuedCount > 0;
@@ -522,14 +564,6 @@ VOICE RULES (critical — you are speaking aloud):
     "bg-primary/60";
 
   return (
-    /*
-     * Positioning:
-     *  Mobile:  above the 56px bottom nav + device safe area
-     *  Desktop: standard bottom-6 right-6
-     * We use a CSS custom property set on :root in index.css — but since
-     * Tailwind can't express env() in utilities, we use an inline style only
-     * for mobile and override it at md breakpoint via a class.
-     */
     <div className="nova-bubble fixed right-4 md:right-6 z-[100] flex flex-col items-end gap-2 select-none">
 
       {/* ── Card panel ────────────────────────────────── */}
@@ -548,7 +582,7 @@ VOICE RULES (critical — you are speaking aloud):
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => { stopAll(); setCardVisible(false); setTranscript(""); setReply(""); }}
+                onClick={() => { stopAll(); setCardVisible(false); setTranscript(""); setReply(""); setNavLinks([]); }}
                 className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Close">
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -588,6 +622,22 @@ VOICE RULES (critical — you are speaking aloud):
               <div className="flex gap-2">
                 <div className={cn("w-1 rounded-full shrink-0", offline ? "bg-orange-400/50" : "bg-emerald-400/50")} />
                 <p className="text-[13px] text-white leading-relaxed">{reply}</p>
+              </div>
+            )}
+
+            {/* ── NOVA Navigation links ─────────────────── */}
+            {navLinks.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {navLinks.map(link => (
+                  <button
+                    key={link.path}
+                    onClick={() => handleNavTap(link)}
+                    className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 active:scale-95 transition-all duration-150 font-medium"
+                  >
+                    <Navigation className="w-2.5 h-2.5" />
+                    {link.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -642,7 +692,6 @@ VOICE RULES (critical — you are speaking aloud):
             offline ? "bg-orange-500/15" : "bg-primary/10")} style={{ animationDuration: "3s" }} />
         )}
 
-        {/* Main bubble — larger on mobile for easy tapping */}
         <button
           onClick={handleBubbleTap}
           disabled={mode === "thinking"}
@@ -658,7 +707,6 @@ VOICE RULES (critical — you are speaking aloud):
           {mode === "speaking"  && <WaveBars count={7} heights={[4,6,5,7,5,6,4]} />}
         </button>
 
-        {/* NOVA label */}
         <span className={cn(
           "text-[9px] font-bold tracking-[0.18em] uppercase text-center transition-all duration-300",
           mode === "idle" && offline   ? "text-orange-400"  :
@@ -671,7 +719,6 @@ VOICE RULES (critical — you are speaking aloud):
           {ASSISTANT_NAME}
         </span>
 
-        {/* Hands-free toggle */}
         <button
           onClick={toggleHandsFree}
           title={handsFree ? "Turn off hands-free" : "Always-on listening — talk from across the room"}
