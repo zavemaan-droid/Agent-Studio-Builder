@@ -230,6 +230,8 @@ export function VoiceAssistant() {
   const [queueStatus,    setQueueStatus]    = useState("");
   const [handsFree,      setHandsFree]      = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
+  const [bubblePos,      setBubblePos]      = useState({ right: 16, bottom: 16 });
+  const [dragging,       setDragging]       = useState(false);
 
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
@@ -239,6 +241,7 @@ export function VoiceAssistant() {
   const wakeEnabledRef    = useRef(settings.wakeWordEnabled);
   const processingRef     = useRef(false);
   const setLocationRef    = useRef(setLocation);
+  const dragRef           = useRef<{ startX: number; startY: number; right: number; bottom: number } | null>(null);
   // Always-current voice settings ref so speak() closure sees latest values
   const voiceSettingsRef  = useRef({ name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch });
 
@@ -250,6 +253,13 @@ export function VoiceAssistant() {
   useEffect(() => {
     voiceSettingsRef.current = { name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch };
   }, [settings.voiceName, settings.voiceRate, settings.voicePitch]);
+  useEffect(() => {
+    const stored = loadData<{ right: number; bottom: number }>("voice-bubble-pos", null);
+    if (stored) setBubblePos(stored);
+  }, []);
+  useEffect(() => {
+    saveData("voice-bubble-pos", bubblePos);
+  }, [bubblePos]);
 
   // Warm up voice engine on mount — Android needs this to load neural voices
   useEffect(() => {
@@ -736,6 +746,33 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
 
   const clearQueue = useCallback(() => { writeQueue([]); setQueue([]); }, []);
 
+  const startDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (modeRef.current === "thinking") return;
+    setDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      right: bubblePos.right,
+      bottom: bubblePos.bottom,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragging || !dragRef.current) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = dragRef.current.startY - e.clientY;
+    setBubblePos({
+      right: Math.max(8, dragRef.current.right - dx),
+      bottom: Math.max(8, dragRef.current.bottom + dy),
+    });
+  };
+
+  const endDrag = () => {
+    setDragging(false);
+    dragRef.current = null;
+  };
+
   const handleNavTap = useCallback((link: NavLink) => {
     setNavLinks([]);
     setLocationRef.current(link.path);
@@ -775,7 +812,10 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     "bg-primary/60";
 
   return (
-    <div className="fixed inset-x-0 bottom-4 z-[100] flex justify-center px-3 pointer-events-none">
+    <div
+      className="fixed z-[100] flex flex-col items-end gap-2 select-none pointer-events-none"
+      style={{ right: bubblePos.right, bottom: bubblePos.bottom }}
+    >
       <div className="w-full max-w-md flex flex-col items-end gap-2 select-none pointer-events-auto">
         {/* ── Card panel ────────────────────────────────── */}
         {cardVisible && !minimized && (
@@ -913,10 +953,14 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
 
         <button
           onClick={handleBubbleTap}
+          onPointerDown={startDrag}
+          onPointerMove={onDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
           disabled={mode === "thinking"}
           title={modeLabel}
           className={cn(
-            "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+            "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40 touch-none",
             BUBBLE_STYLE[mode]
           )}
         >
@@ -937,6 +981,13 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
         )}>
           {ASSISTANT_NAME}
         </span>
+        <button
+          type="button"
+          onClick={() => setBubblePos({ right: 16, bottom: 16 })}
+          className="text-[9px] text-white/35 hover:text-white/70 transition-colors"
+        >
+          reset
+        </button>
 
         <button
           onClick={toggleHandsFree}
