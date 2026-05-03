@@ -233,6 +233,7 @@ export function VoiceAssistant() {
   const [handsFree,      setHandsFree]      = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
   const [bubblePos,      setBubblePos]      = useState({ right: 16, bottom: 88 });
+  const dragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number } | null>(null);
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
   const wakeRecognitionRef= useRef<SpeechRecognition | null>(null);
@@ -257,6 +258,24 @@ export function VoiceAssistant() {
     if (stored) setBubblePos(stored);
   }, []);
   useEffect(() => { saveData("voice-bubble-pos", bubblePos); }, [bubblePos]);
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!dragRef.current) return;
+      const dx = dragRef.current.startX - e.clientX;
+      const dy = window.innerHeight - e.clientY - dragRef.current.startY;
+      setBubblePos({
+        right: Math.max(8, dragRef.current.startRight + dx),
+        bottom: Math.max(8, dragRef.current.startBottom + dy),
+      });
+    };
+    const onUp = () => { dragRef.current = null; };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, []);
   // Warm up voice engine on mount — Android needs this to load neural voices
   useEffect(() => {
     if (!("speechSynthesis" in window)) return;
@@ -931,6 +950,16 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
         )}
 
         <button
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            dragRef.current = {
+              startX: e.clientX,
+              startY: window.innerHeight - e.clientY,
+              startRight: bubblePos.right,
+              startBottom: bubblePos.bottom,
+            };
+            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+          }}
           onClick={handleBubbleTap}
           disabled={mode === "thinking"}
           title={modeLabel}
