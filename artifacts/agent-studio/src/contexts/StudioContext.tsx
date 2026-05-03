@@ -27,8 +27,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   userName: "John Thurmond",
   userColor: "#6366f1",
   voiceName: "",      // auto-pick best British male
-  voiceRate: 1.08,    // brisker, more energetic pace
-  voicePitch: 0.72,   // deeper, JARVIS-like tone
+  voiceRate: 1.14,    // sharper, more cinematic pace
+  voicePitch: 0.68,   // deeper, more commanding tone
   wakeWordEnabled: false, // "Hey Jarvis" always-on wake word
 };
 
