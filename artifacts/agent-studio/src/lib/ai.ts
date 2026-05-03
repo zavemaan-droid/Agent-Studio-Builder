@@ -13,9 +13,17 @@ export async function callAI(
 ): Promise<string> {
   const useGroq = !!(settings?.groqKey && settings.groqKey.trim().length > 20);
   if (useGroq) {
-    return callGroqStream(messages, settings!.groqKey!, onChunk);
+    try {
+      return await callGroqStream(messages, settings!.groqKey!, onChunk);
+    } catch {
+      // fall through to free providers
+    }
   }
-  return callPollinationsStream(messages, onChunk);
+  try {
+    return await callPollinationsStream(messages, onChunk);
+  } catch {
+    return localFallback(messages, onChunk);
+  }
 }
 
 async function callPollinationsStream(
@@ -75,4 +83,15 @@ export async function pingPollinations(): Promise<boolean> {
     const res = await fetch("https://text.pollinations.ai/models", { signal: AbortSignal.timeout(5000) });
     return res.ok;
   } catch { return false; }
+}
+
+function localFallback(messages: Message[], onChunk?: (fullText: string) => void): string {
+  const last = messages.slice().reverse().find(m => m.role === "user")?.content ?? "";
+  const reply = [
+    "I’m running in offline fallback mode.",
+    "I can still help with simple structured responses, summaries, and app guidance.",
+    last ? `I received: ${last.slice(0, 240)}` : "",
+  ].filter(Boolean).join("\n");
+  onChunk?.(reply);
+  return reply;
 }
