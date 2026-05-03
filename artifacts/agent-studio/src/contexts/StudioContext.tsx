@@ -1114,7 +1114,8 @@ Output the COMPLETE improved files — include all three files in full:
         } else if (type === "upgradeAgent") {
           const role = String(data.role ?? "");
           const prompt = String(data.prompt ?? "");
-          if (role && prompt) {
+          const roleOk = ["architect", "builder", "designer", "qa", "packager"].includes(role);
+          if (roleOk && prompt) {
             const before = agentPromptsRef.current[role] ?? "";
             const proposal: UpgradeProposal = {
               id: newId("up-"),
@@ -1132,7 +1133,7 @@ Output the COMPLETE improved files — include all three files in full:
         } else if (type === "updateSetting") {
           const key = String(data.key ?? "") as keyof AppSettings;
           const value = data.value;
-          if (key && value !== undefined) {
+          if (key && ["selfUpgrading", "liveCodeFeed", "autoDownload", "browserEnabled", "wakeWordEnabled"].includes(String(key)) && value !== undefined) {
             const next = { ...settingsRef.current, [key]: value };
             persistSettings(next);
             label = `Updated setting: ${key} → ${String(value)}`;
@@ -1170,7 +1171,7 @@ Output the COMPLETE improved files — include all three files in full:
           }
         }
 
-        if (label) applied.push({ type, label, data, appliedAt: Date.now() });
+        if (label && type) applied.push({ type, label, data, appliedAt: Date.now() });
       } catch {
         // Invalid JSON in fix block — skip
       }
