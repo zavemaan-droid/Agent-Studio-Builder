@@ -295,6 +295,7 @@ export default function SettingsPage() {
               { key: "browserEnabled" as const, label: "Browser research", desc: "Let NOVA use built-in web research and browser support" },
               { key: "webResearchEnabled" as const, label: "Web lookups", desc: "Let NOVA search the internet for current information when needed" },
               { key: "memoryRecallEnabled" as const, label: "Memory recall", desc: "Let NOVA use saved memory for faster, more relevant answers" },
+              { key: "voiceIdentityEnabled" as const, label: "Trusted speaker mode", desc: "Only listen automatically when the trusted speaker is detected" },
             ].map(({ key, label, desc }) => (
               <div key={key} className="flex items-center justify-between p-4">
                 <div>
@@ -316,6 +317,34 @@ export default function SettingsPage() {
                 </button>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Speaker identity */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Speaker Identity</h2>
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Trusted speaker name</label>
+              <input
+                type="text"
+                value={settings.trustedSpeakerName}
+                onChange={e => set({ trustedSpeakerName: e.target.value })}
+                placeholder="Your name"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/50"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                This is a simple trust label, not true biometric voiceprint recognition.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs"
+              onClick={() => set({ voiceIdentityEnabled: !settings.voiceIdentityEnabled })}
+            >
+              {settings.voiceIdentityEnabled ? "Trusted speaker mode on" : "Enable trusted speaker mode"}
+            </Button>
           </div>
         </section>
 

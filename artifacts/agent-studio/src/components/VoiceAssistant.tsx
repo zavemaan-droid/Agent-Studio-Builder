@@ -322,6 +322,7 @@ export function VoiceAssistant() {
       setTranscript("");
       setReply("");
       setNavLinks([]);
+      setSpeakerHint("");
       // Brief visual flash then activate mic
       setTimeout(() => {
         if (modeRef.current === "idle" && !handsFreeRef.current) {
@@ -623,6 +624,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       setTranscript(item.text);
       setReply("");
       setNavLinks([]);
+      setSpeakerHint("");
       setMode("thinking");
       try {
         addUserMessage(item.text);

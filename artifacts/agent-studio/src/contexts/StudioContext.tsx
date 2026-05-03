@@ -21,6 +21,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   browserEnabled: true,
   webResearchEnabled: true,
   memoryRecallEnabled: true,
+  voiceIdentityEnabled: false,
+  trustedSpeakerName: "",
   selectedPlatform: "web",
   userName: "John Thurmond",
   userColor: "#6366f1",
@@ -1161,7 +1163,7 @@ Output the COMPLETE improved files — include all three files in full:
         } else if (type === "updateSetting") {
           const key = String(data.key ?? "") as keyof AppSettings;
           const value = data.value;
-          if (key && ["selfUpgrading", "liveCodeFeed", "autoDownload", "browserEnabled", "webResearchEnabled", "memoryRecallEnabled", "wakeWordEnabled"].includes(String(key)) && value !== undefined) {
+          if (key && ["selfUpgrading", "liveCodeFeed", "autoDownload", "browserEnabled", "webResearchEnabled", "memoryRecallEnabled", "voiceIdentityEnabled", "trustedSpeakerName", "wakeWordEnabled"].includes(String(key)) && value !== undefined) {
             const next = { ...settingsRef.current, [key]: value };
             persistSettings(next);
             label = `Updated setting: ${key} → ${String(value)}`;
