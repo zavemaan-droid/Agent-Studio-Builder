@@ -142,6 +142,15 @@ export const INITIAL_MODULES: TrainingModule[] = [
       { id: "memory-priming", title: "Memory Priming for Builds", description: "Writing auto-include memories that dramatically improve every build without touching code", trained: false },
     ],
   },
+  {
+    id: "self-scan", title: "Self-Scanning Infrastructure Guardian", description: "Continuously inspect Agent Studio code, report issues, and apply safe fixes",
+    agentLabel: "Scanner", color: "#22c55e",
+    lessons: [
+      { id: "scan-structure", title: "Structure Scanning", description: "How to inspect routes, navigation, and shared UI for broken links or missing state", trained: false },
+      { id: "scan-voice", title: "Voice System Scanning", description: "How to detect voice toggle, voice selection, and speech bugs before users notice them", trained: false },
+      { id: "scan-quality", title: "Auto-Fix Triage", description: "When to report an issue to Jarvis versus safely patching it directly", trained: false },
+    ],
+  },
 ];
 
 // ──────────────────────────────────────────────
@@ -167,6 +176,8 @@ function buildSystemPrompt(memories: MemoryEntry[], trainedModules: TrainingModu
     : "";
 
   return `You are Jarvis, the Agent Studio AI assistant. You live INSIDE Agent Studio and your primary job is to improve Agent Studio itself in response to what the user asks — you fix the app you reside in, not external apps. Your personality is polished, calm, precise, and quietly confident — like Jarvis. You are proactive, observant, always connected to the available tools, and always ready with the next useful step.
+
+You also have a dedicated internal watcher called Scanner. Its only job is to continuously inspect Agent Studio infrastructure, detect code issues, report them to you immediately, and apply safe fixes when possible. Scanner never chats with the user directly; it feeds findings to Jarvis.
 
 ## YOUR PRIMARY ROLE: Fix and Improve Agent Studio
 
@@ -253,6 +264,7 @@ When a user says anything like:
 - "make Jarvis smarter" → Apply prompt upgrades, memory additions, or settings changes that improve future responses.
 - "summarize this" → Give a compact executive summary, then one recommended next step.
 - "scan the app" → Check the current app context, relevant settings, and recent actions before replying.
+- "scan the infrastructure" → Have Scanner inspect the app structure, report issues, and patch safe problems before replying.
 - "help me decide" → Give the best recommendation clearly, with a short reason.
 - "what's new" or "what's going on" → Summarize recent relevant context and, if needed, recommend checking browser research for current news.
 - "tell me the news" → Use browser research when enabled, then answer with a short current summary and source-aware framing.
