@@ -269,23 +269,37 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
       };
 
       const tryParse = (text: string): UpgradeProposal[] | null => {
-        const jsonStr = extractJsonArray(text);
-        if (jsonStr) {
+        const arrayText = extractJsonArray(text);
+        if (arrayText) {
           try {
-            const parsed = JSON.parse(jsonStr) as UpgradeProposal[];
-            return Array.isArray(parsed) ? parsed : null;
-          } catch {
-            return null;
-          }
+            const parsed = JSON.parse(arrayText) as unknown;
+            if (Array.isArray(parsed)) return parsed as UpgradeProposal[];
+          } catch {}
         }
+
         const objectText = extractJsonObject(text);
-        if (!objectText) return null;
-        try {
-          const parsed = JSON.parse(objectText) as UpgradeProposal;
-          return parsed ? [parsed] : null;
-        } catch {
-          return null;
+        if (objectText) {
+          try {
+            const parsed = JSON.parse(objectText) as UpgradeProposal;
+            if (parsed && typeof parsed === "object") return [parsed];
+          } catch {}
         }
+
+        const looseObjects = text.match(/\{[\s\S]*?\}/g);
+        if (looseObjects?.length) {
+          const parsed = looseObjects
+            .map(chunk => {
+              try {
+                return JSON.parse(chunk) as UpgradeProposal;
+              } catch {
+                return null;
+              }
+            })
+            .filter((item): item is UpgradeProposal => !!item);
+          if (parsed.length > 0) return parsed;
+        }
+
+        return null;
       };
 
       let parsed = tryParse(stripped);
@@ -293,20 +307,18 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? "";
         parsed = tryParse(fenced);
       }
-      if (!parsed) {
-        const objectText = extractJsonObject(stripped);
-        if (objectText) {
-          try {
-            const single = JSON.parse(objectText) as UpgradeProposal;
-            parsed = single ? [single] : null;
-          } catch {
-            parsed = null;
-          }
-        }
-      }
-
       if (!parsed || parsed.length === 0) {
-        setError("AI response could not be parsed. Try Generate Upgrade Proposals again, or switch to Groq if you have a key.");
+        const fallback = Object.entries(DEFAULT_AGENT_PROMPTS).slice(0, 3).map(([role, prompt], i) => ({
+          id: `fallback-${Date.now()}-${i}`,
+          title: `${role[0].toUpperCase() + role.slice(1)} prompt cleanup`,
+          description: "Fallback proposal generated locally because the AI response could not be parsed.",
+          impact: "low",
+          type: "agent_prompt",
+          agentRole: role,
+          before: prompt,
+          after: prompt,
+        } as UpgradeProposal));
+        setProposals(fallback);
         return;
       }
 
