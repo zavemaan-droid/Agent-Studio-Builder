@@ -93,7 +93,7 @@ function StepCard({ step, index, onRebuild }: { step: AgentStep; index: number; 
 }
 
 export default function StudioPage() {
-  const { startBuild, rebuildFromStep, projects, settings, updateSettings, activeBuildId, getProject } = useStudio();
+  const { startBuild, rebuildFromStep, projects, settings, updateSettings, activeBuildId, getProject, importProject } = useStudio();
   const [location, setLocation] = useLocation();
   const prefill = sessionStorage.getItem("studio-prefill") ?? "";
   if (prefill) sessionStorage.removeItem("studio-prefill");
@@ -102,6 +102,7 @@ export default function StudioPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadedContent, setUploadedContent] = useState<string | null>(null);
   const [uploadName, setUploadName] = useState<string | null>(null);
+  const [importedId, setImportedId] = useState<string | null>(null);
 
   // Get build ID from URL params
   const buildId = new URLSearchParams(location.split("?")[1] ?? "").get("build") ?? activeBuildId;
@@ -132,9 +133,26 @@ export default function StudioPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadName(file.name);
+    if (file.name.endsWith(".zip")) {
+      setUploadedContent("ZIP upload detected. Use Projects → Import/Edit flow to unpack and edit file sets.");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = ev => setUploadedContent(ev.target?.result as string ?? null);
     reader.readAsText(file);
+  };
+
+  const handleImport = () => {
+    if (!uploadedContent || !uploadName) return;
+    const id = importProject({
+      name: uploadName.replace(/\.[^/.]+$/, "") || "Imported App",
+      description: `Imported app from ${uploadName}. Edit it and release it back out.`,
+      platform,
+      files: [{ path: uploadName, content: uploadedContent }],
+      uploadedFrom: uploadName,
+    });
+    setImportedId(id);
+    setLocation(`/editor?id=${id}`);
   };
 
   return (
@@ -230,6 +248,14 @@ export default function StudioPage() {
           {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
           Start Build
         </Button>
+        {uploadedContent && uploadName && (
+          <Button variant="outline" onClick={handleImport} className="w-full h-11 text-sm font-semibold">
+            Import file and edit it
+          </Button>
+        )}
+        {importedId && (
+          <p className="text-xs text-emerald-400">Imported and opened in the editor.</p>
+        )}
 
         {/* Active build pipeline */}
         {activeProject && (

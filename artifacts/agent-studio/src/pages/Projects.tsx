@@ -6,7 +6,7 @@ import {
   Globe, Smartphone, Trash2, Download, RefreshCw,
   X, ExternalLink, CheckCircle2, Loader2, AlertCircle,
   ChevronRight, Monitor, Tablet, Code2, Github, Play,
-  FileCode, Copy, Check, Archive, Info, Pencil
+  FileCode, Copy, Check, Archive, Info, Pencil, Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@/lib/types";
@@ -657,8 +657,9 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
 
 // ── Projects page ──
 export default function ProjectsPage() {
-  const { projects, deleteProject } = useStudio();
+  const { projects, deleteProject, importProject } = useStudio();
   const [filter, setFilter] = useState<Filter>("all");
+  const [uploading, setUploading] = useState(false);
 
   const filters: { id: Filter; label: string; count?: number }[] = [
     { id: "all", label: "All", count: projects.length },
@@ -675,13 +676,41 @@ export default function ProjectsPage() {
     return p.status === filter;
   });
 
+  const handleImport = async (file: File) => {
+    setUploading(true);
+    const text = await file.text();
+    importProject({
+      name: file.name.replace(/\.[^/.]+$/, "") || "Imported App",
+      description: `Imported app from ${file.name}. Open in Editor to change it and export a fresh release.`,
+      platform: "web",
+      files: [{ path: file.name, content: text }],
+      uploadedFrom: file.name,
+    });
+    setUploading(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="px-5 py-4 border-b border-border shrink-0">
-        <h1 className="text-base font-semibold">Projects</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {projects.length} project{projects.length !== 1 ? "s" : ""} — Preview, download, or push to GitHub
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-base font-semibold">Projects</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {projects.length} project{projects.length !== 1 ? "s" : ""} — Preview, edit, export, or push to GitHub
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-xs cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
+            <Upload className="w-3.5 h-3.5" />
+            Import app
+            <input
+              type="file"
+              className="hidden"
+              accept=".html,.js,.ts,.tsx,.css,.json,.txt"
+              onChange={e => e.target.files?.[0] && void handleImport(e.target.files[0])}
+              disabled={uploading}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="px-5 py-2.5 border-b border-border flex gap-1.5 flex-wrap shrink-0">
