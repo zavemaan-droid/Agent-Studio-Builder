@@ -261,6 +261,13 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         return text.slice(start, end + 1);
       };
 
+      const extractJsonObject = (text: string): string | null => {
+        const start = text.indexOf("{");
+        const end = text.lastIndexOf("}");
+        if (start === -1 || end === -1 || end <= start) return null;
+        return text.slice(start, end + 1);
+      };
+
       const tryParse = (text: string): UpgradeProposal[] | null => {
         const jsonStr = extractJsonArray(text);
         if (!jsonStr) return null;
@@ -277,9 +284,20 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? "";
         parsed = tryParse(fenced);
       }
+      if (!parsed) {
+        const objectText = extractJsonObject(stripped);
+        if (objectText) {
+          try {
+            const single = JSON.parse(objectText) as UpgradeProposal;
+            parsed = single ? [single] : null;
+          } catch {
+            parsed = null;
+          }
+        }
+      }
 
       if (!parsed || parsed.length === 0) {
-        setError("AI returned an unexpected format. I couldn't parse the upgrade proposals, so try Generate Upgrade Proposals again.");
+        setError("AI returned a non-JSON response. Try Generate Upgrade Proposals again, or switch to Groq if you have a key.");
         return;
       }
 
