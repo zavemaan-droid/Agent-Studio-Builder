@@ -50,7 +50,7 @@ export default function SettingsPage() {
       const v = getAvailableVoices().find(v => v.name === settings.voiceName);
       if (v) u.voice = v;
     } else {
-      // Auto-pick best voice same as NOVA does
+      // Auto-pick best voice same as Jarvis does
       const all = getAvailableVoices();
       const best = all.find(v => v.name === "Google UK English Male")
         ?? all.find(v => v.name.includes("Google UK"))
@@ -288,9 +288,9 @@ export default function SettingsPage() {
               { key: "autoDownload" as const, label: "Auto-download on complete", desc: "Automatically download project files when build finishes" },
               { key: "liveCodeFeed" as const, label: "Live code feed", desc: "Show agent output in real-time as it's generated" },
               { key: "selfUpgrading" as const, label: "Self-learning", desc: "Automatically add build patterns to memory after each build" },
-              { key: "browserEnabled" as const, label: "Browser research", desc: "Let NOVA use built-in web research and browser support" },
-              { key: "webResearchEnabled" as const, label: "Web lookups", desc: "Let NOVA search the internet for current information when needed" },
-              { key: "memoryRecallEnabled" as const, label: "Memory recall", desc: "Let NOVA use saved memory for faster, more relevant answers" },
+              { key: "browserEnabled" as const, label: "Browser research", desc: "Let Jarvis use built-in web research and browser support" },
+              { key: "webResearchEnabled" as const, label: "Web lookups", desc: "Let Jarvis search the internet for current information when needed" },
+              { key: "memoryRecallEnabled" as const, label: "Memory recall", desc: "Let Jarvis use saved memory for faster, more relevant answers" },
               { key: "voiceIdentityEnabled" as const, label: "Trusted speaker mode", desc: "Only listen automatically when the trusted speaker is detected" },
             ].map(({ key, label, desc }) => (
               <div key={key} className="flex items-center justify-between p-4">
@@ -344,9 +344,9 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* NOVA Voice */}
+        {/* Jarvis Voice */}
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">NOVA Voice</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Jarvis Voice</h2>
           <div className="rounded-lg border border-border bg-card p-4 space-y-4">
 
             {/* Voice picker */}
@@ -436,10 +436,10 @@ export default function SettingsPage() {
               <div className="space-y-0.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className="text-sm font-medium">Hey NOVA — Wake Word</span>
+                  <span className="text-sm font-medium">Hey Jarvis — Wake Word</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-5.5">
-                  NOVA listens passively for your voice. Say <span className="text-cyan-400 font-medium">"Hey NOVA"</span> to activate hands-free — no button tap needed. The bubble glows cyan when active.
+                  Jarvis listens passively for your voice. Say <span className="text-cyan-400 font-medium">"Hey Jarvis"</span> to activate hands-free — no button tap needed. The bubble glows cyan when active.
                 </p>
               </div>
               <button

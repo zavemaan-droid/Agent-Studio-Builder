@@ -6,7 +6,7 @@ import { loadData, saveData } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { Mic, X, ChevronDown, WifiOff, Clock, Ear, Navigation, Radio } from "lucide-react";
 
-const ASSISTANT_NAME = "NOVA";
+const ASSISTANT_NAME = "Jarvis";
 
 type VoiceMode = "idle" | "listening" | "thinking" | "speaking";
 
@@ -42,8 +42,8 @@ const SEED_CACHE: Record<string, string> = {
   "hello":               "Hey — what do you need?",
   "hey":                 "What's up?",
   "hi":                  "Hi there. What can I help with?",
-  "hey nova":            "Right here. What do you need?",
-  "nova":                "I'm listening.",
+  "hey jarvis":          "Right here. What do you need?",
+  "jarvis":              "I'm listening.",
   "where is the dashboard": "The Dashboard is the home screen. It shows your build stats, self-upgrade controls, and quick-start buttons.",
   "where is studio":     "Studio is in the bottom nav — it's where you describe your app and start a build.",
   "where is settings":   "Settings is in the bottom nav. That's where you add your Groq API key and GitHub token.",
@@ -106,7 +106,7 @@ const PAGE_PATTERNS: { keywords: string[]; path: string; label: string }[] = [
   { keywords: ["dashboard", "home screen", "overview", "start screen"],       path: "/dashboard",  label: "Dashboard" },
   { keywords: ["studio", "start build", "build studio", "build an app"],      path: "/studio",     label: "Studio" },
   { keywords: ["projects", "built apps", "my apps", "your apps", "built app", "finished app"], path: "/projects", label: "Projects" },
-  { keywords: ["assistant", "chat", "nova chat"],                             path: "/assistant",  label: "Assistant" },
+  { keywords: ["assistant", "chat", "jarvis chat"],                           path: "/assistant",  label: "Assistant" },
   { keywords: ["memory bank", "memories", "memory"],                          path: "/memory",     label: "Memory Bank" },
   { keywords: ["training", "lessons", "modules", "learn"],                    path: "/training",   label: "Training" },
   { keywords: ["settings", "groq key", "github token", "api key", "configuration"], path: "/settings", label: "Settings" },
@@ -207,7 +207,7 @@ function ThinkingDots() {
   );
 }
 
-const WAKE_PATTERNS = ["nova", "hey nova", "ok nova", "okay nova", "oi nova"];
+const WAKE_PATTERNS = ["jarvis", "hey jarvis", "ok jarvis", "okay jarvis", "oi jarvis"];
 
 function containsWakeWord(text: string): boolean {
   const lower = text.toLowerCase().replace(/[^a-z\s]/g, "");
@@ -496,7 +496,7 @@ VOICE RULES (critical — you are speaking aloud):
 - If the user asks for news, current events, or live information, treat it as a research task and answer succinctly with the freshest available context.
 - Never say "I cannot." Always find a path.
 
-NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studio (build apps), Projects (view built apps), Assistant (chat with NOVA), Memory Bank (knowledge storage), Training (skill modules), Settings (keys and config), Agents (pipeline view), Library (app templates), Browser (research and source lookup). When you mention a section by name, users can tap a button to go there.${ctx}`;
+NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studio (build apps), Projects (view built apps), Assistant (chat with Jarvis), Memory Bank (knowledge storage), Training (skill modules), Settings (keys and config), Agents (pipeline view), Library (app templates), Browser (research and source lookup). When you mention a section by name, users can tap a button to go there.${ctx}`;
   }, [settings, memories]);
 
   const askAI = useCallback(async (text: string): Promise<string> => {
@@ -560,7 +560,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       setReply(clean);
       addAssistantMessage(raw);
 
-      // Detect nav intents from both the user's request and NOVA's reply
+      // Detect nav intents from both the user's request and Jarvis's reply
       const links = detectNavIntents(raw + " " + text);
       setNavLinks(links);
 
@@ -835,7 +835,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
                 </div>
               )}
 
-              {/* ── NOVA Navigation links ─────────────────── */}
+              {/* ── Jarvis Navigation links ─────────────────── */}
               {navLinks.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   {navLinks.map(link => (

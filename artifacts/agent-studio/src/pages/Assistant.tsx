@@ -164,7 +164,7 @@ export default function AssistantPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  // Auto-navigate to Studio when NOVA kicks off a build
+  // Auto-navigate to Studio when Jarvis kicks off a build
   useEffect(() => {
     const last = chatHistory[chatHistory.length - 1];
     if (last?.role === "assistant" && last.actions) {
@@ -205,7 +205,7 @@ export default function AssistantPage() {
             <span className="text-[10px] font-bold text-white tracking-widest">N</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold">NOVA</h1>
+            <h1 className="text-sm font-semibold">Jarvis</h1>
             <p className="text-[11px] text-muted-foreground">
               Self-aware assistant · Fixes Agent Studio instantly{settings.groqKey ? " · Groq active" : " · Free via Pollinations"}
             </p>

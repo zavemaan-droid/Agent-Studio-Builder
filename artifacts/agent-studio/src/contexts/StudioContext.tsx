@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   voiceName: "",      // auto-pick best British male
   voiceRate: 0.88,    // deliberate, authoritative pace
   voicePitch: 0.80,   // deep, JARVIS-like tone
-  wakeWordEnabled: false, // "Hey NOVA" always-on wake word
+  wakeWordEnabled: false, // "Hey Jarvis" always-on wake word
 };
 
 const SEED_MEMORIES: MemoryEntry[] = [
@@ -166,7 +166,7 @@ function buildSystemPrompt(memories: MemoryEntry[], trainedModules: TrainingModu
     ? `\n\n## Trained Skills\n${trainedLessons.map(title => `- ${title}`).join("\n")}`
     : "";
 
-  return `You are NOVA, the Agent Studio AI assistant. You live INSIDE Agent Studio and your primary job is to improve Agent Studio itself in response to what the user asks — you fix the app you reside in, not external apps. Your personality is polished, calm, precise, and quietly confident — like Jarvis. You are proactive, observant, always connected to the available tools, and always ready with the next useful step.
+  return `You are Jarvis, the Agent Studio AI assistant. You live INSIDE Agent Studio and your primary job is to improve Agent Studio itself in response to what the user asks — you fix the app you reside in, not external apps. Your personality is polished, calm, precise, and quietly confident — like Jarvis. You are proactive, observant, always connected to the available tools, and always ready with the next useful step.
 
 ## YOUR PRIMARY ROLE: Fix and Improve Agent Studio
 
@@ -250,7 +250,7 @@ When a user says anything like:
 - "open X", "go to X", "show me X" → Navigate the user to the correct section immediately if it exists.
 - "what can you do?" → Briefly summarize core capabilities: build apps, improve the studio, browse/research, manage memory, and apply upgrades.
 - "check this for me" → Inspect the relevant feature or page and report back with a concrete next step.
-- "make NOVA smarter" → Apply prompt upgrades, memory additions, or settings changes that improve future responses.
+- "make Jarvis smarter" → Apply prompt upgrades, memory additions, or settings changes that improve future responses.
 - "summarize this" → Give a compact executive summary, then one recommended next step.
 - "scan the app" → Check the current app context, relevant settings, and recent actions before replying.
 - "help me decide" → Give the best recommendation clearly, with a short reason.
@@ -1150,7 +1150,7 @@ Output the COMPLETE improved files — include all three files in full:
             const proposal: UpgradeProposal = {
               id: newId("up-"),
               title: `Assistant upgrade: ${role}`,
-              description: "Suggested by NOVA for review before applying.",
+              description: "Suggested by Jarvis for review before applying.",
               impact: "medium",
               type: "agent_prompt",
               agentRole: role,
@@ -1237,7 +1237,7 @@ Output the COMPLETE improved files — include all three files in full:
       // Parse and execute any action blocks in the response
       let actions = executeActions(response);
 
-      // If NOVA triggered a startBuild action, actually start the build now
+      // If Jarvis triggered a startBuild action, actually start the build now
       const buildActionIdx = actions.findIndex(a => a.type === "startBuild");
       if (buildActionIdx !== -1) {
         const buildAction = actions[buildActionIdx]!;
