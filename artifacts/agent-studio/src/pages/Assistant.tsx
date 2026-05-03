@@ -3,19 +3,19 @@ import { useStudio, parseFilesFromText } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import {
   Send, Trash2, Zap, Bot, Copy, Check, ExternalLink,
-  MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck
+  MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck, HammerIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import type { AssistantAction } from "@/lib/types";
 
 const SUGGESTIONS = [
-  "The preview isn't working — diagnose and fix it",
-  "Make the AI generate better-looking, more polished apps",
-  "Add a new template for a social media dashboard",
-  "Where do I find my built apps?",
-  "How do I make builds faster?",
-  "Run a self-check on the whole system and fix anything broken",
+  "Build me a todo list app",
+  "Make me a fun game I can play in my browser",
+  "Create a notes app for my phone",
+  "Build me a simple weather app",
+  "I want a habit tracker app",
+  "What kinds of apps can you build for me?",
 ];
 
 const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
@@ -24,6 +24,7 @@ const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
   updateSetting:  <Settings2 className="w-3.5 h-3.5" />,
   featureRequest: <Star className="w-3.5 h-3.5" />,
   addTemplate:    <PlusSquare className="w-3.5 h-3.5" />,
+  startBuild:     <HammerIcon className="w-3.5 h-3.5" />,
 };
 
 const ACTION_COLORS: Record<AssistantAction["type"], string> = {
@@ -32,6 +33,7 @@ const ACTION_COLORS: Record<AssistantAction["type"], string> = {
   updateSetting:  "bg-orange-500/10 border-orange-500/30 text-orange-400",
   featureRequest: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400",
   addTemplate:    "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+  startBuild:     "bg-primary/10 border-primary/30 text-primary",
 };
 
 const ACTION_DEST: Record<AssistantAction["type"], { label: string; path: string }> = {
@@ -40,6 +42,7 @@ const ACTION_DEST: Record<AssistantAction["type"], { label: string; path: string
   updateSetting:  { label: "Open Settings", path: "/settings" },
   featureRequest: { label: "View in Memory Bank", path: "/memory" },
   addTemplate:    { label: "View in Library", path: "/library" },
+  startBuild:     { label: "Watch it build live →", path: "/studio" },
 };
 
 function ActionCard({ action }: { action: AssistantAction }) {
@@ -144,7 +147,7 @@ function UserAvatar({ name, color }: { name: string; color: string }) {
 
 export default function AssistantPage() {
   const { chatHistory, sendChat, clearChat, startBuild, settings } = useStudio();
-  const firstName = settings.userName.trim().split(/\s+/)[0] || "John";
+  const firstName = settings.userName.trim().split(/\s+/)[0] || "there";
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [, setLocation] = useLocation();
@@ -154,6 +157,18 @@ export default function AssistantPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
+
+  // Auto-navigate to Studio when NOVA kicks off a build
+  useEffect(() => {
+    const last = chatHistory[chatHistory.length - 1];
+    if (last?.role === "assistant" && last.actions) {
+      const buildAction = last.actions.find(a => a.type === "startBuild" && a.data.buildId);
+      if (buildAction?.data.buildId) {
+        const id = String(buildAction.data.buildId);
+        setTimeout(() => setLocation(`/studio?build=${id}`), 800);
+      }
+    }
+  }, [chatHistory, setLocation]);
 
   const handleSend = async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -212,9 +227,9 @@ export default function AssistantPage() {
               <Bot className="w-8 h-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-semibold">What can I fix for you, {firstName}?</h2>
+              <h2 className="text-lg font-semibold">Hey {firstName}! What would you like to build?</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
-                I live inside Agent Studio. Tell me what's broken or what you want — I'll fix it right now without you touching any code.
+                Just tell me in plain English — "build me a todo app", "make me a game", anything you want. I'll handle all the technical stuff and build it for you.
               </p>
             </div>
             <div className="grid gap-2 w-full max-w-md">
@@ -327,7 +342,7 @@ export default function AssistantPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Tell me what's broken or what you want added..."
+            placeholder={'Tell me what to build, e.g. "make me a todo app"...'}
             rows={1}
             className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-32 leading-relaxed py-0.5"
             style={{ scrollbarWidth: "none" }}
