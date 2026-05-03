@@ -15,6 +15,7 @@ import AgentsPage from "@/pages/Agents";
 import LibraryPage from "@/pages/Library";
 import EditorPage from "@/pages/Editor";
 import RebuildPage from "@/pages/Rebuild";
+import VideoPage from "@/pages/Video";
 
 function AppLayout() {
   return (
@@ -39,6 +40,7 @@ function AppLayout() {
           <Route path="/settings"   component={SettingsPage} />
           <Route path="/editor"     component={EditorPage} />
           <Route path="/rebuild"    component={RebuildPage} />
+          <Route path="/video"      component={VideoPage} />
           <Route>
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground text-sm">Page not found</p>

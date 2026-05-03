@@ -112,6 +112,7 @@ const PAGE_PATTERNS: { keywords: string[]; path: string; label: string }[] = [
   { keywords: ["settings", "groq key", "github token", "api key", "configuration"], path: "/settings", label: "Settings" },
   { keywords: ["agents", "agent pipeline", "build pipeline"],                 path: "/agents",     label: "Agents" },
   { keywords: ["library", "templates", "template"],                           path: "/library",    label: "Library" },
+  { keywords: ["video", "videos", "tutorial video", "explainer video"],       path: "/video",      label: "Video" },
 ];
 
 function detectNavIntents(text: string): NavLink[] {
