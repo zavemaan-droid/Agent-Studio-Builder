@@ -1477,6 +1477,13 @@ Output the COMPLETE improved files — include all three files in full:
 
   const applyUpgrade = useCallback((proposal: UpgradeProposal) => {
     const applied: UpgradeProposal = { ...proposal, appliedAt: Date.now() };
+    const alreadyApplied = upgradeHistoryRef.current.some(existing =>
+      existing.type === proposal.type &&
+      existing.agentRole === proposal.agentRole &&
+      existing.before === proposal.before &&
+      existing.after === proposal.after
+    );
+    if (alreadyApplied) return;
     // If it targets an agent prompt, permanently update it
     if (proposal.type === "agent_prompt" && proposal.agentRole) {
       const nextPrompts = { ...agentPromptsRef.current, [proposal.agentRole]: proposal.after };
