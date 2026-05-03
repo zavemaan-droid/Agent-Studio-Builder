@@ -769,6 +769,12 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
+  const handleBubblePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const wasDragging = dragging;
+    endDrag();
+    if (!wasDragging) handleBubbleTap(e as unknown as React.MouseEvent<HTMLButtonElement>);
+  };
+
   const onDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (!dragging || !dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
@@ -965,10 +971,9 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
         )}
 
         <button
-          onClick={handleBubbleTap}
           onPointerDown={startDrag}
           onPointerMove={onDrag}
-          onPointerUp={endDrag}
+          onPointerUp={handleBubblePointerUp}
           onPointerCancel={endDrag}
           onPointerLeave={endDrag}
           disabled={mode === "thinking"}
