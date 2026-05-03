@@ -125,6 +125,8 @@ export default function SettingsPage() {
     a.click();
   };
 
+  const appLink = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
+
   const HealthChip = ({ name, label }: { name: string; label: string }) => {
     const state = health[name] ?? "idle";
     return (
@@ -488,6 +490,11 @@ export default function SettingsPage() {
               <span>·</span>
               <span>All stored on this device</span>
             </div>
+            {appLink && (
+              <div className="rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground break-all">
+                App link: <span className="text-foreground">{appLink}</span>
+              </div>
+            )}
             <Button size="sm" variant="outline" className="w-full text-xs" onClick={exportAll} data-testid="export-data">
               Export All Data
             </Button>
