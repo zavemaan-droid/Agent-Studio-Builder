@@ -31,6 +31,7 @@ const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
   featureRequest: <Star className="w-3.5 h-3.5" />,
   addTemplate:    <PlusSquare className="w-3.5 h-3.5" />,
   startBuild:     <HammerIcon className="w-3.5 h-3.5" />,
+  scanCode:       <Cpu className="w-3.5 h-3.5" />,
 };
 
 const ACTION_COLORS: Record<AssistantAction["type"], string> = {
@@ -40,6 +41,7 @@ const ACTION_COLORS: Record<AssistantAction["type"], string> = {
   featureRequest: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400",
   addTemplate:    "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
   startBuild:     "bg-primary/10 border-primary/30 text-primary",
+  scanCode:       "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
 };
 
 const ACTION_DEST: Record<AssistantAction["type"], { label: string; path: string }> = {
@@ -49,6 +51,7 @@ const ACTION_DEST: Record<AssistantAction["type"], { label: string; path: string
   featureRequest: { label: "View in Memory Bank", path: "/memory" },
   addTemplate:    { label: "View in Library", path: "/library" },
   startBuild:     { label: "Watch it build live →", path: "/studio" },
+  scanCode:       { label: "Open Dashboard", path: "/dashboard" },
 };
 
 function ActionCard({ action }: { action: AssistantAction }) {

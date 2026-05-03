@@ -142,6 +142,15 @@ export const INITIAL_MODULES: TrainingModule[] = [
       { id: "memory-priming", title: "Memory Priming for Builds", description: "Writing auto-include memories that dramatically improve every build without touching code", trained: false },
     ],
   },
+  {
+    id: "scanner-watch", title: "Internal Scanner Watch", description: "Continuously inspect Agent Studio code and report issues to Jarvis",
+    agentLabel: "Scanner", color: "#22c55e",
+    lessons: [
+      { id: "scan-routes", title: "Route and Navigation Checks", description: "Detect broken routes, missing links, and navigation regressions", trained: false },
+      { id: "scan-settings", title: "Settings and Voice Checks", description: "Detect settings drift, voice bugs, and bad defaults before users notice them", trained: false },
+      { id: "scan-upgrades", title: "Upgrade Safety Checks", description: "Flag risky upgrades, missing call-chain updates, and incomplete feature wiring", trained: false },
+    ],
+  },
 ];
 
 // ──────────────────────────────────────────────
@@ -167,6 +176,8 @@ function buildSystemPrompt(memories: MemoryEntry[], trainedModules: TrainingModu
     : "";
 
   return `You are Jarvis, the Agent Studio AI assistant. You live INSIDE Agent Studio and your primary job is to improve Agent Studio itself in response to what the user asks — you fix the app you reside in, not external apps. Your personality is polished, calm, precise, and quietly confident — like Jarvis. You are proactive, observant, always connected to the available tools, and always ready with the next useful step.
+
+You have an internal code scanner that watches for app issues during upgrades. It reports findings to you in plain language and suggests safe fixes. It is not a separate user-facing assistant.
 
 ## YOUR PRIMARY ROLE: Fix and Improve Agent Studio
 
@@ -199,6 +210,11 @@ You can instantly apply any of these changes by including action blocks in your 
 ### Action: Add a Template to the Library
 \`\`\`fix
 {"type":"addTemplate","name":"Template Name","description":"What this builds","prompt":"Build a [description]...","category":"web"}
+\`\`\`
+
+### Action: Record a Code Scan
+\`\`\`fix
+{"type":"scanCode","label":"Scanner report","data":{"summary":"...","issues":[{"severity":"high","file":"...","problem":"...","fix":"..."}]} }
 \`\`\`
 
 **CRITICAL RULES FOR ACTIONS:**
@@ -253,6 +269,7 @@ When a user says anything like:
 - "make Jarvis smarter" → Apply prompt upgrades, memory additions, or settings changes that improve future responses.
 - "summarize this" → Give a compact executive summary, then one recommended next step.
 - "scan the app" → Check the current app context, relevant settings, and recent actions before replying.
+- "scan the code" → Run the internal scanner mentally against the app context and report issues to Jarvis before replying.
 - "help me decide" → Give the best recommendation clearly, with a short reason.
 - "what's new" or "what's going on" → Summarize recent relevant context and, if needed, recommend checking browser research for current news.
 - "tell me the news" → Use browser research when enabled, then answer with a short current summary and source-aware framing.
