@@ -254,15 +254,35 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         .replace(/\s*```\s*$/, "")
         .trim();
 
-      // Extract the JSON array — find the outermost [ ... ]
-      const start = stripped.indexOf("[");
-      const end = stripped.lastIndexOf("]");
-      if (start === -1 || end === -1 || end <= start) {
-        throw new Error("AI returned an unexpected format. Try again — it usually works on the second attempt.");
-      }
-      const jsonStr = stripped.slice(start, end + 1);
+      const extractJsonArray = (text: string): string | null => {
+        const start = text.indexOf("[");
+        const end = text.lastIndexOf("]");
+        if (start === -1 || end === -1 || end <= start) return null;
+        return text.slice(start, end + 1);
+      };
 
-      const parsed = JSON.parse(jsonStr) as UpgradeProposal[];
+      const tryParse = (text: string): UpgradeProposal[] | null => {
+        const jsonStr = extractJsonArray(text);
+        if (!jsonStr) return null;
+        try {
+          const parsed = JSON.parse(jsonStr) as UpgradeProposal[];
+          return Array.isArray(parsed) ? parsed : null;
+        } catch {
+          return null;
+        }
+      };
+
+      let parsed = tryParse(stripped);
+      if (!parsed) {
+        const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? "";
+        parsed = tryParse(fenced);
+      }
+
+      if (!parsed || parsed.length === 0) {
+        setError("AI returned an unexpected format. I couldn't parse the upgrade proposals, so try Generate Upgrade Proposals again.");
+        return;
+      }
+
       if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("No proposals generated — please try again");
 
       // Validate and fill in actual before text from current prompts
