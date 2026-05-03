@@ -33,7 +33,7 @@ async function callPollinationsStream(
   const res = await fetch(POLLINATIONS_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "openai-fast", messages, temperature: 0.7, private: true, stream: !!onChunk }),
+    body: JSON.stringify({ model: "openai-fast", messages, temperature: 0.4, private: true, stream: !!onChunk }),
   });
   if (!res.ok) throw new Error(`Pollinations error: ${res.status}`);
   if (onChunk && res.body) return readStream(res.body, onChunk);
@@ -47,7 +47,7 @@ async function callGroqStream(
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages, temperature: 0.7, stream: !!onChunk }),
+    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages, temperature: 0.4, stream: !!onChunk }),
   });
   if (!res.ok) throw new Error(`Groq error ${res.status}`);
   if (onChunk && res.body) return readStream(res.body, onChunk);
