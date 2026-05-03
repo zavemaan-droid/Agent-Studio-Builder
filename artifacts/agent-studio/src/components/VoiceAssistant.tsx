@@ -708,6 +708,8 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     }
     if (current === "listening") {
       recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setMode("idle");
       if (!handsFreeRef.current) setMode("idle");
       return;
     }
