@@ -63,6 +63,8 @@ export interface AppSettings {
   browserEnabled: boolean;
   webResearchEnabled: boolean;
   memoryRecallEnabled: boolean;
+  voiceIdentityEnabled: boolean;
+  trustedSpeakerName: string;
   selectedPlatform: Platform;
   userName: string;
   userColor: string;
