@@ -254,7 +254,7 @@ export function VoiceAssistant() {
     voiceSettingsRef.current = { name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch };
   }, [settings.voiceName, settings.voiceRate, settings.voicePitch]);
   useEffect(() => {
-    const stored = loadData<{ right: number; bottom: number }>("voice-bubble-pos", null);
+    const stored = loadData<{ right: number; bottom: number } | null>("voice-bubble-pos", null);
     if (stored) setBubblePos(stored);
   }, []);
   useEffect(() => {
@@ -693,7 +693,11 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       setMinimized(false);
       setTimeout(startListening, 400);
     }
-    if (!handsFree) recognitionRef.current?.stop();
+    if (!handsFree) {
+      try { recognitionRef.current?.abort(); } catch { recognitionRef.current?.stop(); }
+      recognitionRef.current = null;
+      setWakeActive(false);
+    }
   }, [handsFree, startListening]);
 
   const handleBubbleTap = useCallback(() => {
@@ -705,8 +709,9 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       return;
     }
     if (current === "listening") {
-      recognitionRef.current?.stop();
+      try { recognitionRef.current?.abort(); } catch { recognitionRef.current?.stop(); }
       recognitionRef.current = null;
+      setWakeActive(false);
       setMode("idle");
       if (!handsFreeRef.current) setMode("idle");
       return;
@@ -727,8 +732,9 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       void speak(`Hands-free on. I'm always listening.`);
     } else {
       window.speechSynthesis.cancel();
-      recognitionRef.current?.stop();
+      try { recognitionRef.current?.abort(); } catch { recognitionRef.current?.stop(); }
       recognitionRef.current = null;
+      setWakeActive(false);
       setMode("idle");
       void speak("Hands-free off. Tap the mic when you need me.");
       // If wake word is enabled, start wake listener
@@ -739,10 +745,12 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   }, [speak, stopWakeListener]);
 
   const stopAll = useCallback(() => {
-    recognitionRef.current?.stop();
+    try { recognitionRef.current?.abort(); } catch { recognitionRef.current?.stop(); }
     recognitionRef.current = null;
     stopWakeListener();
     window.speechSynthesis?.cancel();
+    setWakeActive(false);
+    setHandsFree(false);
     setMode("idle");
   }, [stopWakeListener]);
 
