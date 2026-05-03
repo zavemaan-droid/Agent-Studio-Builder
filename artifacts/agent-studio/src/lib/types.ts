@@ -1,6 +1,6 @@
 export type Platform = "web" | "android";
 export type BuildStatus = "building" | "ready" | "failed";
-export type AgentRole = "architect" | "builder" | "designer" | "qa" | "packager" | "analyzer" | "reconstructor" | "polisher" | "scanner";
+export type AgentRole = "architect" | "builder" | "designer" | "qa" | "packager" | "analyzer" | "reconstructor" | "polisher";
 
 export interface AgentStep {
   role: AgentRole;
@@ -75,7 +75,7 @@ export interface AppSettings {
 }
 
 export interface AssistantAction {
-  type: "addMemory" | "upgradeAgent" | "updateSetting" | "featureRequest" | "addTemplate" | "startBuild" | "scanCode";
+  type: "addMemory" | "upgradeAgent" | "updateSetting" | "featureRequest" | "addTemplate" | "startBuild";
   label: string;
   data: Record<string, unknown>;
   appliedAt: number;
