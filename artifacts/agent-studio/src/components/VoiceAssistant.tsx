@@ -232,8 +232,6 @@ export function VoiceAssistant() {
   const [queueStatus,    setQueueStatus]    = useState("");
   const [handsFree,      setHandsFree]      = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
-  const [bubblePos,      setBubblePos]      = useState({ right: 16, bottom: 16 });
-
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
   const wakeRecognitionRef= useRef<SpeechRecognition | null>(null);
@@ -253,14 +251,6 @@ export function VoiceAssistant() {
   useEffect(() => {
     voiceSettingsRef.current = { name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch };
   }, [settings.voiceName, settings.voiceRate, settings.voicePitch]);
-  useEffect(() => {
-    const stored = loadData<{ right: number; bottom: number } | null>("voice-bubble-pos", null);
-    if (stored) setBubblePos(stored);
-  }, []);
-  useEffect(() => {
-    saveData("voice-bubble-pos", bubblePos);
-  }, [bubblePos]);
-
   // Warm up voice engine on mount — Android needs this to load neural voices
   useEffect(() => {
     if (!("speechSynthesis" in window)) return;
@@ -797,7 +787,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   return (
     <div
       className="fixed z-[100] flex flex-col items-end gap-2 select-none pointer-events-none"
-      style={{ right: bubblePos.right, bottom: bubblePos.bottom }}
+      style={{ right: 16, bottom: 16 }}
     >
       <div className="w-full max-w-md flex flex-col items-end gap-2 select-none pointer-events-auto">
         {/* ── Card panel ────────────────────────────────── */}
@@ -960,14 +950,6 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
         )}>
           {ASSISTANT_NAME}
         </span>
-        <button
-          type="button"
-          onClick={() => setBubblePos({ right: 16, bottom: 16 })}
-          className="text-[9px] text-white/35 hover:text-white/70 transition-colors"
-        >
-          reset
-        </button>
-
         <button
           onClick={toggleHandsFree}
           title={handsFree ? "Turn off hands-free" : "Always-on listening — talk from across the room"}
