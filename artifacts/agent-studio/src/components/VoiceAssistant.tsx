@@ -143,7 +143,6 @@ const JARVIS_VOICE_PRIORITY = [
   "Microsoft George",         // Windows — British
   "Microsoft Ryan",           // Windows 11 neural British
   "Microsoft George Online",
-  "Google UK English Female", // fallback — still neural
   "Rishi",                    // Indian English — better than nothing
   "Google US English",        // US neural — still far better than Samsung TTS
   "Microsoft David",
@@ -180,7 +179,7 @@ function pickVoice(savedName?: string): SpeechSynthesisVoice | null {
   if (gb) return gb;
 
   // 5. Any English voice
-  return voices.find(v => v.lang.startsWith("en")) ?? voices[0] ?? null;
+  return voices.find(v => v.lang.startsWith("en") && /male|man|george|david|mark|daniel|arthur|oliver|ryan|rishi/i.test(v.name)) ?? voices.find(v => v.lang.startsWith("en")) ?? voices[0] ?? null;
 }
 
 function WaveBars({ count = 5, heights }: { count?: number; heights?: number[] }) {
@@ -322,7 +321,6 @@ export function VoiceAssistant() {
       setTranscript("");
       setReply("");
       setNavLinks([]);
-      setSpeakerHint("");
       // Brief visual flash then activate mic
       setTimeout(() => {
         if (modeRef.current === "idle" && !handsFreeRef.current) {
@@ -624,7 +622,6 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       setTranscript(item.text);
       setReply("");
       setNavLinks([]);
-      setSpeakerHint("");
       setMode("thinking");
       try {
         addUserMessage(item.text);
@@ -777,109 +774,109 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     "bg-primary/60";
 
   return (
-    <div className="nova-bubble fixed right-4 md:right-6 z-[100] flex flex-col items-end gap-2 select-none">
-
-      {/* ── Card panel ────────────────────────────────── */}
-      {cardVisible && !minimized && (
-        <div className="bg-[#0f0f14] border border-white/10 rounded-2xl shadow-2xl w-[min(17rem,calc(100vw-2rem))] overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8">
-            <div className="flex items-center gap-2">
-              <div className={cn("w-2 h-2 rounded-full transition-colors", dotColor)} />
-              <span className="text-[11px] font-medium text-white/60 tracking-wide uppercase truncate max-w-[150px]">
-                {ASSISTANT_NAME} · {modeLabel}
-              </span>
+    <div className="fixed inset-x-0 bottom-4 z-[100] flex justify-center px-3 pointer-events-none">
+      <div className="w-full max-w-md flex flex-col items-end gap-2 select-none pointer-events-auto">
+        {/* ── Card panel ────────────────────────────────── */}
+        {cardVisible && !minimized && (
+          <div className="bg-[#0f0f14] border border-white/10 rounded-3xl shadow-2xl w-full overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8">
+              <div className="flex items-center gap-2">
+                <div className={cn("w-2 h-2 rounded-full transition-colors", dotColor)} />
+                <span className="text-[11px] font-medium text-white/60 tracking-wide uppercase truncate max-w-[150px]">
+                  {ASSISTANT_NAME} · {modeLabel}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setMinimized(true)}
+                  className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Minimise">
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => { stopAll(); setCardVisible(false); setTranscript(""); setReply(""); setNavLinks([]); }}
+                  className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Close">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setMinimized(true)}
-                className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Minimise">
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => { stopAll(); setCardVisible(false); setTranscript(""); setReply(""); setNavLinks([]); }}
-                className="p-1.5 text-white/40 hover:text-white/80 transition-colors" title="Close">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
 
-          <div className="px-4 py-3 space-y-3 min-h-[64px]">
-            {handsFree && mode === "idle" && !transcript && !reply && (
-              <div className="flex items-center gap-2 py-1">
-                <div className="flex gap-0.5 items-end h-4">
-                  {[2,4,3,5,3,4,2].map((h, i) => (
-                    <span key={i} className="rounded-full bg-fuchsia-400/50"
-                      style={{ width: 2, height: h * 2, animation: `bounce ${0.5 + i * 0.08}s ease-in-out infinite alternate`, animationDelay: `${i * 0.1}s` }} />
+            <div className="px-4 py-3 space-y-3 min-h-[64px]">
+              {handsFree && mode === "idle" && !transcript && !reply && (
+                <div className="flex items-center gap-2 py-1">
+                  <div className="flex gap-0.5 items-end h-4">
+                    {[2,4,3,5,3,4,2].map((h, i) => (
+                      <span key={i} className="rounded-full bg-fuchsia-400/50"
+                        style={{ width: 2, height: h * 2, animation: `bounce ${0.5 + i * 0.08}s ease-in-out infinite alternate`, animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                  <span className="text-[12px] text-white/40">Ready — just speak</span>
+                </div>
+              )}
+
+              {transcript && (
+                <div className="flex gap-2">
+                  <div className="w-1 rounded-full bg-primary/50 shrink-0" />
+                  <p className="text-[13px] text-white/70 leading-relaxed">{transcript}</p>
+                </div>
+              )}
+
+              {mode === "thinking" && !reply && (
+                <div className="flex items-center gap-2 py-1">
+                  {[0,1,2].map(i => (
+                    <span key={i} className="w-2 h-2 rounded-full bg-primary/60 animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
-                <span className="text-[12px] text-white/40">Ready — just speak</span>
-              </div>
-            )}
+              )}
 
-            {transcript && (
-              <div className="flex gap-2">
-                <div className="w-1 rounded-full bg-primary/50 shrink-0" />
-                <p className="text-[13px] text-white/70 leading-relaxed">{transcript}</p>
-              </div>
-            )}
+              {reply && (
+                <div className="flex gap-2">
+                  <div className={cn("w-1 rounded-full shrink-0", offline ? "bg-orange-400/50" : "bg-emerald-400/50")} />
+                  <p className="text-[13px] text-white leading-relaxed">{reply}</p>
+                </div>
+              )}
 
-            {mode === "thinking" && !reply && (
-              <div className="flex items-center gap-2 py-1">
-                {[0,1,2].map(i => (
-                  <span key={i} className="w-2 h-2 rounded-full bg-primary/60 animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }} />
-                ))}
-              </div>
-            )}
-
-            {reply && (
-              <div className="flex gap-2">
-                <div className={cn("w-1 rounded-full shrink-0", offline ? "bg-orange-400/50" : "bg-emerald-400/50")} />
-                <p className="text-[13px] text-white leading-relaxed">{reply}</p>
-              </div>
-            )}
-
-            {/* ── NOVA Navigation links ─────────────────── */}
-            {navLinks.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                {navLinks.map(link => (
-                  <button
-                    key={link.path}
-                    onClick={() => handleNavTap(link)}
-                    className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 active:scale-95 transition-all duration-150 font-medium"
-                  >
-                    <Navigation className="w-2.5 h-2.5" />
-                    {link.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {hasQueue && (
-            <div className="border-t border-white/8 px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-orange-400">
-                <Clock className="w-3 h-3" />
-                <span className="text-[11px] font-medium">{queuedCount} message{queuedCount > 1 ? "s" : ""} queued offline</span>
-              </div>
-              <button onClick={clearQueue} className="text-[10px] text-white/30 hover:text-white/60 transition-colors">Clear</button>
+              {/* ── NOVA Navigation links ─────────────────── */}
+              {navLinks.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {navLinks.map(link => (
+                    <button
+                      key={link.path}
+                      onClick={() => handleNavTap(link)}
+                      className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 active:scale-95 transition-all duration-150 font-medium"
+                    >
+                      <Navigation className="w-2.5 h-2.5" />
+                      {link.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
 
-          {offline && (
-            <div className="border-t border-white/8 px-4 py-2">
-              <p className="text-[10px] text-orange-400/70">Offline mode · cached responses active · queue replays on reconnect</p>
-            </div>
-          )}
-        </div>
-      )}
+            {hasQueue && (
+              <div className="border-t border-white/8 px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-orange-400">
+                  <Clock className="w-3 h-3" />
+                  <span className="text-[11px] font-medium">{queuedCount} message{queuedCount > 1 ? "s" : ""} queued offline</span>
+                </div>
+                <button onClick={clearQueue} className="text-[10px] text-white/30 hover:text-white/60 transition-colors">Clear</button>
+              </div>
+            )}
 
-      {/* ── Bubble ────────────────────────────────────── */}
-      <div className="relative flex flex-col items-center gap-2">
-        {hasQueue && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 border-2 border-[#0f0f14] flex items-center justify-center z-10">
-            <span className="text-[9px] font-bold text-white">{queuedCount > 9 ? "9+" : queuedCount}</span>
+            {offline && (
+              <div className="border-t border-white/8 px-4 py-2">
+                <p className="text-[10px] text-orange-400/70">Offline mode · cached responses active · queue replays on reconnect</p>
+              </div>
+            )}
           </div>
         )}
+
+        {/* ── Bubble ────────────────────────────────────── */}
+        <div className="relative flex flex-col items-center gap-2">
+          {hasQueue && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 border-2 border-[#0f0f14] flex items-center justify-center z-10">
+              <span className="text-[9px] font-bold text-white">{queuedCount > 9 ? "9+" : queuedCount}</span>
+            </div>
+          )}
 
         {mode === "listening" && (
           <>
@@ -918,7 +915,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
           disabled={mode === "thinking"}
           title={modeLabel}
           className={cn(
-            "w-16 h-16 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+            "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40",
             BUBBLE_STYLE[mode]
           )}
         >
@@ -953,6 +950,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
           <Ear className="w-3 h-3" />
           {handsFree ? "Hands-free on" : "Hands-free"}
         </button>
+        </div>
       </div>
     </div>
   );
