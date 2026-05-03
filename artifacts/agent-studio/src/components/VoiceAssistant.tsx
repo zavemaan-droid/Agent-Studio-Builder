@@ -5,7 +5,8 @@ import { callAI } from "@/lib/ai";
 import { loadData, saveData } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { Mic, X, ChevronDown, WifiOff, Clock, Ear, Navigation, Radio } from "lucide-react";
-import { getActiveCompanion } from "@/lib/companions";
+
+const ASSISTANT_NAME = "NOVA";
 
 type VoiceMode = "idle" | "listening" | "thinking" | "speaking";
 
@@ -207,14 +208,11 @@ function ThinkingDots() {
   );
 }
 
-function wakePatterns(name: string): string[] {
-  const n = name.toLowerCase();
-  return [n, `hey ${n}`, `ok ${n}`, `okay ${n}`, `oi ${n}`];
-}
+const WAKE_PATTERNS = ["nova", "hey nova", "ok nova", "okay nova", "oi nova"];
 
-function containsWakeWord(text: string, companionName: string): boolean {
+function containsWakeWord(text: string): boolean {
   const lower = text.toLowerCase().replace(/[^a-z\s]/g, "");
-  return wakePatterns(companionName).some(p => lower.includes(p));
+  return WAKE_PATTERNS.some(p => lower.includes(p));
 }
 
 export function VoiceAssistant() {
@@ -233,25 +231,21 @@ export function VoiceAssistant() {
   const [handsFree,      setHandsFree]      = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
 
-  const companion = getActiveCompanion(settings.activeCompanionId);
-
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
   const wakeRecognitionRef= useRef<SpeechRecognition | null>(null);
   const modeRef           = useRef<VoiceMode>("idle");
   const handsFreeRef      = useRef(handsFree);
   const wakeEnabledRef    = useRef(settings.wakeWordEnabled);
-  const companionNameRef  = useRef(companion.name);
   const processingRef     = useRef(false);
   const setLocationRef    = useRef(setLocation);
   // Always-current voice settings ref so speak() closure sees latest values
   const voiceSettingsRef  = useRef({ name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch });
 
-  useEffect(() => { modeRef.current = mode; },              [mode]);
-  useEffect(() => { handsFreeRef.current = handsFree; },    [handsFree]);
+  useEffect(() => { modeRef.current = mode; },             [mode]);
+  useEffect(() => { handsFreeRef.current = handsFree; },   [handsFree]);
   useEffect(() => { wakeEnabledRef.current = settings.wakeWordEnabled; }, [settings.wakeWordEnabled]);
-  useEffect(() => { companionNameRef.current = companion.name; }, [companion.name]);
-  useEffect(() => { saveData(HANDSFREE_KEY, handsFree); },  [handsFree]);
+  useEffect(() => { saveData(HANDSFREE_KEY, handsFree); }, [handsFree]);
   useEffect(() => { setLocationRef.current = setLocation; }, [setLocation]);
   useEffect(() => {
     voiceSettingsRef.current = { name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch };
@@ -318,7 +312,7 @@ export function VoiceAssistant() {
       if (triggered) return;
       let text = "";
       for (let i = 0; i < e.results.length; i++) text += e.results[i]![0]!.transcript;
-      if (!containsWakeWord(text, companionNameRef.current)) return;
+      if (!containsWakeWord(text)) return;
 
       // Wake word detected!
       triggered = true;
@@ -492,18 +486,17 @@ export function VoiceAssistant() {
     const ctx      = autoMems.length
       ? `\n\nContext:\n${autoMems.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
       : "";
-    const activeCompanion = getActiveCompanion(settings.activeCompanionId);
-    return `You are ${activeCompanion.name}, the personal AI voice assistant for${name ? ` ${name}` : " the user"}. You run inside Agent Studio and know every feature of it. ${activeCompanion.personality}
+    return `You are ${ASSISTANT_NAME}, the personal AI voice assistant for${name ? ` ${name}` : " the user"}. You run inside Agent Studio and know every feature of it. You are formal, precise, calm, and deeply capable — like a brilliant chief of staff. Direct. Never verbose.
 
 VOICE RULES (critical — you are speaking aloud):
 - Respond in 1 to 3 spoken sentences max. Never longer.
 - No markdown. No bullets. No code. Pure natural speech.
-- Sound like a trusted expert, not a chatbot.
+- Sound like a trusted expert, not a chatbot. Composed and confident.
 - If asked about Agent Studio features, give the precise answer directly — including which section to find it in.
 - If asked to go somewhere or find something, confirm you're taking them there.
 - Never say "I cannot." Always find a path.
 
-NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studio (build apps), Projects (view built apps), Assistant (chat), Memory Bank (knowledge storage), Training (skill modules), Settings (keys and config), Agents (pipeline view), Library (app templates). When you mention a section by name, users can tap a button to go there.${ctx}`;
+NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studio (build apps), Projects (view built apps), Assistant (chat with NOVA), Memory Bank (knowledge storage), Training (skill modules), Settings (keys and config), Agents (pipeline view), Library (app templates). When you mention a section by name, users can tap a button to go there.${ctx}`;
   }, [settings, memories]);
 
   const askAI = useCallback(async (text: string): Promise<string> => {
@@ -751,14 +744,12 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   const queuedCount = queue.length;
   const hasQueue    = queuedCount > 0;
 
-  const cName = companion.name;
-
   const modeLabel =
     offline && mode === "idle" ? (hasQueue ? `Offline · ${queuedCount} queued` : "Offline") :
     mode === "idle" && handsFree ? "Always listening" :
-    mode === "idle" && wakeActive ? `Awaiting "Hey ${cName}"` :
-    mode === "idle"      ? `Hey ${cName}` :
-    mode === "listening" ? "Listening…"   :
+    mode === "idle" && wakeActive ? `Awaiting "Hey ${ASSISTANT_NAME}"` :
+    mode === "idle"      ? `Hey ${ASSISTANT_NAME}` :
+    mode === "listening" ? "Listening…"              :
     mode === "thinking"  ? queueStatus || "Thinking…" :
                            "Speaking…";
 
@@ -767,9 +758,9 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       offline   ? "bg-gradient-to-br from-orange-500 to-amber-600 hover:scale-105" :
       handsFree ? "bg-gradient-to-br from-violet-500 to-fuchsia-600 hover:scale-105" :
       wakeActive? "bg-gradient-to-br from-cyan-500 to-teal-700 hover:scale-105 hover:shadow-cyan-500/30" :
-                  `${companion.bubbleGradient} hover:scale-105`,
+                  "bg-gradient-to-br from-primary to-purple-700 hover:scale-105 hover:shadow-primary/40",
     listening: "bg-gradient-to-br from-rose-500 to-red-600 scale-110 shadow-rose-500/50",
-    thinking:  `${companion.bubbleGradient} opacity-70 cursor-not-allowed`,
+    thinking:  "bg-gradient-to-br from-primary/70 to-purple-800 cursor-not-allowed",
     speaking:  "bg-gradient-to-br from-emerald-500 to-teal-600 scale-105 shadow-emerald-500/50",
   };
 
@@ -792,7 +783,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
             <div className="flex items-center gap-2">
               <div className={cn("w-2 h-2 rounded-full transition-colors", dotColor)} />
               <span className="text-[11px] font-medium text-white/60 tracking-wide uppercase truncate max-w-[150px]">
-                {cName} · {modeLabel}
+                {ASSISTANT_NAME} · {modeLabel}
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -943,7 +934,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
           mode === "thinking"          ? "text-amber-400/70":
                                          "text-emerald-400"
         )}>
-          {cName}
+          {ASSISTANT_NAME}
         </span>
 
         <button

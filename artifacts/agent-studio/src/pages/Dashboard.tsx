@@ -6,11 +6,10 @@ import {
   Bot, Zap, Box, TrendingUp, ChevronRight, Loader2,
   CheckCircle2, Sparkles, Globe, Smartphone, ArrowRight,
   XCircle, AlertTriangle, History, ChevronDown, Eye, EyeOff,
-  Cpu, RefreshCcw, Brain, Users
+  Cpu, RefreshCcw, Brain
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { UpgradeProposal } from "@/lib/types";
-import { PRESET_COMPANIONS } from "@/lib/companions";
 
 const AGENT_PIPELINE = [
   { role: "architect", name: "Architect", color: "#f59e0b", desc: "Plans the entire app structure" },
@@ -167,7 +166,7 @@ export default function DashboardPage() {
   const {
     projects, memories, modules, trainingState, trainingPercent,
     settings, agentPrompts, upgradeHistory,
-    applyUpgrade, resetAgentPrompts, updateSettings,
+    applyUpgrade, resetAgentPrompts,
   } = useStudio();
   const [, setLocation] = useLocation();
   const [generating, setGenerating] = useState(false);
@@ -317,64 +316,6 @@ Make 4 substantive improvements. Do not add markdown. Start with [ immediately.`
       </div>
 
       <div className="p-5 space-y-5 max-w-2xl mx-auto w-full">
-
-        {/* ── Companions ── */}
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Companions</h2>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground ml-auto">
-              {settings.activeCompanionId === "nova" ? "NOVA active" :
-               settings.activeCompanionId === "aria" ? "ARIA active" : "ECHO active"}
-            </span>
-          </div>
-          <div className="p-3 flex flex-col gap-2">
-            {PRESET_COMPANIONS.map(c => {
-              const isActive = settings.activeCompanionId === c.id;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => updateSettings({ activeCompanionId: c.id })}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 active:scale-[0.98]",
-                    isActive
-                      ? "border-transparent ring-2 bg-card"
-                      : "border-border hover:border-border/80 hover:bg-muted/30"
-                  )}
-                  style={isActive ? { boxShadow: `0 0 0 2px ${c.accent}60, inset 0 0 0 1px ${c.accent}20` } : {}}
-                >
-                  {/* Avatar */}
-                  <div
-                    className={cn("w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0", c.bubbleGradient)}
-                  >
-                    {c.name.slice(0, 2)}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{c.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{c.tagline}</span>
-                      {isActive && (
-                        <span
-                          className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{ color: c.accent, background: `${c.accent}20` }}
-                        >
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug truncate">{c.description}</p>
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground/60">
-                      <span>Speed {c.voiceRate}×</span>
-                      <span>Pitch {c.voicePitch}</span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Stat cards */}
         <div className="grid grid-cols-3 gap-3">
