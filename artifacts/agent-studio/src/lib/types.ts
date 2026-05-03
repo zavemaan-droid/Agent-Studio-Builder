@@ -75,7 +75,7 @@ export interface AppSettings {
 }
 
 export interface AssistantAction {
-  type: "addMemory" | "upgradeAgent" | "updateSetting" | "featureRequest" | "addTemplate" | "startBuild";
+  type: "addMemory" | "upgradeAgent" | "updateSetting" | "featureRequest" | "addTemplate" | "startBuild" | "scanCode";
   label: string;
   data: Record<string, unknown>;
   appliedAt: number;
