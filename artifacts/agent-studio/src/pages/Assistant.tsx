@@ -16,6 +16,12 @@ const SUGGESTIONS = [
   "Build me a simple weather app",
   "I want a habit tracker app",
   "What kinds of apps can you build for me?",
+  "Make me a recipe app with favorites",
+  "Build a budget tracker for me",
+  "Create a workout planner app",
+  "Make me a birthday reminder app",
+  "Build a simple chat app",
+  "Create a photo gallery app",
 ];
 
 const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
