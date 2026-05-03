@@ -60,6 +60,7 @@ export interface AppSettings {
   autoDownload: boolean;
   liveCodeFeed: boolean;
   selfUpgrading: boolean;
+  browserEnabled: boolean;
   selectedPlatform: Platform;
   userName: string;
   userColor: string;
