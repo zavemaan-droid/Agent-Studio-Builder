@@ -233,8 +233,6 @@ export function VoiceAssistant() {
   const [handsFree,      setHandsFree]      = useState(() => loadData<boolean>(HANDSFREE_KEY, false));
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
   const [bubblePos,      setBubblePos]      = useState({ right: 16, bottom: 16 });
-  const [dragging,       setDragging]       = useState(false);
-  const [dragMoved,      setDragMoved]      = useState(false);
 
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
@@ -244,7 +242,6 @@ export function VoiceAssistant() {
   const wakeEnabledRef    = useRef(settings.wakeWordEnabled);
   const processingRef     = useRef(false);
   const setLocationRef    = useRef(setLocation);
-  const dragRef           = useRef<{ startX: number; startY: number; right: number; bottom: number } | null>(null);
   // Always-current voice settings ref so speak() closure sees latest values
   const voiceSettingsRef  = useRef({ name: settings.voiceName, rate: settings.voiceRate, pitch: settings.voicePitch });
 
@@ -699,12 +696,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     if (!handsFree) recognitionRef.current?.stop();
   }, [handsFree, startListening]);
 
-  const handleBubbleTap = useCallback((e?: React.MouseEvent<HTMLButtonElement>) => {
-    if (dragMoved) {
-      e?.preventDefault();
-      e?.stopPropagation();
-      return;
-    }
+  const handleBubbleTap = useCallback(() => {
     const current = modeRef.current;
     if (current === "speaking") {
       window.speechSynthesis.cancel();
@@ -724,7 +716,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     setMinimized(false);
     setNavLinks([]);
     startListening();
-  }, [startListening, dragMoved]);
+  }, [startListening]);
 
   const toggleHandsFree = useCallback(() => {
     const next = !handsFreeRef.current;
@@ -755,42 +747,6 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   }, [stopWakeListener]);
 
   const clearQueue = useCallback(() => { writeQueue([]); setQueue([]); }, []);
-
-  const startDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (modeRef.current === "thinking") return;
-    setDragging(true);
-    setDragMoved(false);
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      right: bubblePos.right,
-      bottom: bubblePos.bottom,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const handleBubblePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    const wasDragging = dragging;
-    endDrag();
-    if (!wasDragging) handleBubbleTap(e as unknown as React.MouseEvent<HTMLButtonElement>);
-  };
-
-  const onDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (!dragging || !dragRef.current) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = dragRef.current.startY - e.clientY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) setDragMoved(true);
-    setBubblePos({
-      right: Math.max(8, dragRef.current.right - dx),
-      bottom: Math.max(8, dragRef.current.bottom + dy),
-    });
-  };
-
-  const endDrag = () => {
-    setDragging(false);
-    dragRef.current = null;
-    setTimeout(() => setDragMoved(false), 0);
-  };
 
   const handleNavTap = useCallback((link: NavLink) => {
     setNavLinks([]);
@@ -971,15 +927,11 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
         )}
 
         <button
-          onPointerDown={startDrag}
-          onPointerMove={onDrag}
-          onPointerUp={handleBubblePointerUp}
-          onPointerCancel={endDrag}
-          onPointerLeave={endDrag}
+          onClick={handleBubbleTap}
           disabled={mode === "thinking"}
           title={modeLabel}
           className={cn(
-            "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40 touch-none",
+            "w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-white/40",
             BUBBLE_STYLE[mode]
           )}
         >
