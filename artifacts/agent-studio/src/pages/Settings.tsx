@@ -43,8 +43,8 @@ export default function SettingsPage() {
     const u = new SpeechSynthesisUtterance(
       `Good day, ${settings.userName.split(" ")[0] || "sir"}. All systems are fully operational.`
     );
-    u.rate   = settings.voiceRate || 1;
-    u.pitch  = Math.min(settings.voicePitch || 0.72, 0.72);
+    u.rate   = settings.voiceRate || 1.14;
+    u.pitch  = Math.min(settings.voicePitch || 0.68, 0.68);
     u.volume = 1.0;
     if (settings.voiceName) {
       const v = getAvailableVoices().find(v => v.name === settings.voiceName);
