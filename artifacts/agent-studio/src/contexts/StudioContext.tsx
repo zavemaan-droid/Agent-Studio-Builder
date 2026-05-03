@@ -1113,15 +1113,19 @@ Output the COMPLETE improved files — include all three files in full:
           const role = String(data.role ?? "");
           const prompt = String(data.prompt ?? "");
           if (role && prompt) {
-            const next = { ...agentPromptsRef.current, [role]: prompt };
-            persistAgentPrompts(next);
-            const history = [...upgradeHistoryRef.current, {
-              id: newId("up-"), title: `Assistant upgrade: ${role}`, description: `Agent prompt improved by assistant`,
-              impact: "medium" as const, type: "agent_prompt" as const, agentRole: role,
-              before: agentPromptsRef.current[role] ?? "", after: prompt, appliedAt: Date.now(),
-            }];
-            persistUpgradeHistory(history);
-            label = `Upgraded ${role} agent prompt`;
+            const before = agentPromptsRef.current[role] ?? "";
+            const proposal: UpgradeProposal = {
+              id: newId("up-"),
+              title: `Assistant upgrade: ${role}`,
+              description: "Suggested by NOVA for review before applying.",
+              impact: "medium",
+              type: "agent_prompt",
+              agentRole: role,
+              before,
+              after: prompt,
+            };
+            persistUpgradeHistory([...upgradeHistoryRef.current, proposal]);
+            label = `Suggested upgrade for ${role} agent`;
           }
         } else if (type === "updateSetting") {
           const key = String(data.key ?? "") as keyof AppSettings;

@@ -218,7 +218,7 @@ export default function DashboardPage() {
         fullPrompt: prompt,
       }));
 
-      const aiPrompt = `You are the Self-Upgrade AI for Agent Studio. Analyze the current agent prompts and generate 4 upgrade proposals that will permanently improve code generation quality.
+      const aiPrompt = `You are the Self-Upgrade AI for Agent Studio. Analyze the current agent prompts and generate 4 upgrade proposals that improve quality, safety, reliability, and performance.
 
 Current system state:
 ${JSON.stringify(systemState, null, 2)}
@@ -241,7 +241,7 @@ Each object in the array must have exactly these fields:
 Example of correct format:
 [{"id":"up-001","title":"Better Builder Output","description":"Adds stricter output format rules.","impact":"high","type":"agent_prompt","agentRole":"builder","before":"current prompt...","after":"improved full prompt..."}]
 
-Make 4 substantive improvements. Do not add markdown. Start with [ immediately.`;
+Favor changes that reduce bugs, prevent unsafe output, improve prompt reliability, and make builds faster or more consistent. Make 4 substantive improvements. Do not add markdown. Start with [ immediately.`;
 
       const raw = await callAI(
         [{ role: "user", content: aiPrompt }],
