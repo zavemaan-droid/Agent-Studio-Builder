@@ -293,6 +293,8 @@ export default function SettingsPage() {
               { key: "liveCodeFeed" as const, label: "Live code feed", desc: "Show agent output in real-time as it's generated" },
               { key: "selfUpgrading" as const, label: "Self-learning", desc: "Automatically add build patterns to memory after each build" },
               { key: "browserEnabled" as const, label: "Browser research", desc: "Let NOVA use built-in web research and browser support" },
+              { key: "webResearchEnabled" as const, label: "Web lookups", desc: "Let NOVA search the internet for current information when needed" },
+              { key: "memoryRecallEnabled" as const, label: "Memory recall", desc: "Let NOVA use saved memory for faster, more relevant answers" },
             ].map(({ key, label, desc }) => (
               <div key={key} className="flex items-center justify-between p-4">
                 <div>

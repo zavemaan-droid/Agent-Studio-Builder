@@ -61,6 +61,8 @@ export interface AppSettings {
   liveCodeFeed: boolean;
   selfUpgrading: boolean;
   browserEnabled: boolean;
+  webResearchEnabled: boolean;
+  memoryRecallEnabled: boolean;
   selectedPlatform: Platform;
   userName: string;
   userColor: string;
