@@ -6,7 +6,7 @@ import {
   Globe, Smartphone, Trash2, Download, RefreshCw,
   X, ExternalLink, CheckCircle2, Loader2, AlertCircle,
   ChevronRight, Monitor, Tablet, Code2, Github, Play,
-  FileCode, Copy, Check, Archive, Info, Pencil, Upload
+  FileCode, Copy, Check, Archive, Info, Pencil, Upload, Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@/lib/types";
@@ -45,6 +45,38 @@ async function downloadAsZip(files: { path: string; content: string }[], project
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(a.href), 15000);
   void hasCss; // suppress unused warning
+}
+
+async function shareProject(project: Project): Promise<boolean> {
+  const files = project.files ?? [];
+  if (files.length === 0) return false;
+
+  const summary = [
+    `Project: ${project.name}`,
+    project.description ? `Description: ${project.description}` : "",
+    `Platform: ${project.platform}`,
+    `Files: ${files.length}`,
+  ].filter(Boolean).join("\n");
+
+  const payload = {
+    title: project.name,
+    text: `${summary}\n\nOpen the app in Agent Studio to preview or import it.`,
+  };
+
+  const canShare = typeof navigator !== "undefined" && "share" in navigator;
+  if (canShare) {
+    try {
+      await navigator.share(payload);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(`${payload.title}\n\n${payload.text}`);
+  }
+  return false;
 }
 
 // ── Inline all CSS/JS into a single self-contained HTML document ──
@@ -165,6 +197,11 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
     setPushing(false);
   };
 
+  const handleShare = async () => {
+    const shared = await shareProject(project);
+    if (!shared) openInNewTab();
+  };
+
   const vpSize = VIEWPORT_SIZES[viewport];
 
   return (
@@ -225,6 +262,15 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
           >
             <Archive className="w-3.5 h-3.5" />
             .zip
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground text-xs"
+            title="Share externally"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            Share
           </button>
 
           {(settings.githubToken || true) && (
@@ -431,6 +477,11 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
     setTimeout(() => setPushResult(null), 5000);
   };
 
+  const handleShare = async () => {
+    const shared = await shareProject(project);
+    if (!shared) handleDownload();
+  };
+
   return (
     <>
       {previewOpen && (
@@ -564,6 +615,16 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
               >
                 <Archive className="w-3 h-3" />
                 .zip
+              </button>
+
+              <button
+                onClick={handleShare}
+                disabled={!project.files || project.files.length === 0}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors disabled:opacity-40"
+                data-testid={`share-${project.id}`}
+              >
+                <Share2 className="w-3 h-3" />
+                Share
               </button>
 
               <button
