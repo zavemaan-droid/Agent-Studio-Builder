@@ -356,7 +356,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
       <div className="p-5 space-y-5 max-w-2xl mx-auto w-full">
 
         {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard value={AGENT_PIPELINE.length} label="Active Agents" color="#7c3aed" icon={Bot} />
           <StatCard value={appliedUpgrades} label="Upgrades Applied" color="#10b981" icon={Sparkles} />
           <StatCard value={readyProjects} label="Apps Built" color="#f59e0b" icon={Box} />
