@@ -137,10 +137,10 @@ function wantsNavigation(text: string): boolean {
 // Best-sounding voices in priority order for JARVIS-style British male.
 // On Android Chrome, localService:false = Google's neural cloud voices (much better).
 const JARVIS_VOICE_PRIORITY = [
+  "Google UK English Male",   // Best Jarvis-like online voice when available
   "Daniel",                   // macOS/iOS — deep British
   "Arthur",                   // macOS Ventura+ — British male
   "Oliver",                   // macOS — British male
-  "Google UK English Male",   // Best on Android Chrome — neural
   "Microsoft George",         // Windows — British
   "Microsoft Ryan",           // Windows 11 neural British
   "Microsoft George Online",
