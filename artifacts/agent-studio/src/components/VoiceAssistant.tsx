@@ -234,6 +234,7 @@ export function VoiceAssistant() {
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
   const [bubblePos,      setBubblePos]      = useState({ right: 16, bottom: 16 });
   const [dragging,       setDragging]       = useState(false);
+  const [dragMoved,      setDragMoved]      = useState(false);
 
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
@@ -698,7 +699,12 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     if (!handsFree) recognitionRef.current?.stop();
   }, [handsFree, startListening]);
 
-  const handleBubbleTap = useCallback(() => {
+  const handleBubbleTap = useCallback((e?: React.MouseEvent<HTMLButtonElement>) => {
+    if (dragMoved) {
+      e?.preventDefault();
+      e?.stopPropagation();
+      return;
+    }
     const current = modeRef.current;
     if (current === "speaking") {
       window.speechSynthesis.cancel();
@@ -718,7 +724,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     setMinimized(false);
     setNavLinks([]);
     startListening();
-  }, [startListening]);
+  }, [startListening, dragMoved]);
 
   const toggleHandsFree = useCallback(() => {
     const next = !handsFreeRef.current;
@@ -753,6 +759,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   const startDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (modeRef.current === "thinking") return;
     setDragging(true);
+    setDragMoved(false);
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -766,6 +773,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     if (!dragging || !dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
     const dy = dragRef.current.startY - e.clientY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) setDragMoved(true);
     setBubblePos({
       right: Math.max(8, dragRef.current.right - dx),
       bottom: Math.max(8, dragRef.current.bottom + dy),
@@ -775,6 +783,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   const endDrag = () => {
     setDragging(false);
     dragRef.current = null;
+    setTimeout(() => setDragMoved(false), 0);
   };
 
   const handleNavTap = useCallback((link: NavLink) => {
@@ -961,6 +970,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
           onPointerMove={onDrag}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
+          onPointerLeave={endDrag}
           disabled={mode === "thinking"}
           title={modeLabel}
           className={cn(
