@@ -1,6 +1,6 @@
 export type Platform = "web" | "android";
 export type BuildStatus = "building" | "ready" | "failed";
-export type AgentRole = "architect" | "builder" | "designer" | "qa" | "packager";
+export type AgentRole = "architect" | "builder" | "designer" | "qa" | "packager" | "analyzer" | "reconstructor" | "polisher";
 
 export interface AgentStep {
   role: AgentRole;

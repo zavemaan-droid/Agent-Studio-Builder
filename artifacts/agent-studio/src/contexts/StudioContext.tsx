@@ -482,6 +482,7 @@ interface Ctx {
   getProject: (id: string) => Project | undefined;
   updateProjectFiles: (projectId: string, files: { path: string; content: string }[]) => void;
   importProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt" | "steps" | "status"> & { files: { path: string; content: string }[] }) => string;
+  startRebuild: (sourceFiles: { path: string; content: string }[], instructions: string, platform: Platform) => Promise<string>;
   pushToGithub: (projectId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
 
   // Chat
@@ -657,6 +658,221 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     persistProjects([next, ...projectsRef.current]);
     return id;
   }, [persistProjects]);
+
+  // ──────────────────────────────────────────────
+  // Rebuild from source pipeline
+  // ──────────────────────────────────────────────
+  const startRebuild = useCallback(async (
+    sourceFiles: { path: string; content: string }[],
+    instructions: string,
+    platform: Platform,
+  ): Promise<string> => {
+    const id = newId("proj-");
+    const firstName = sourceFiles[0]?.path.replace(/\.[^/.]+$/, "") ?? "Rebuilt App";
+    const name = firstName.replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()).slice(0, 40) || "Rebuilt App";
+
+    const steps: AgentStep[] = [
+      { role: "analyzer",      name: "Analyzer",      status: "queued", output: "" },
+      { role: "reconstructor", name: "Reconstructor", status: "queued", output: "" },
+      { role: "polisher",      name: "Polisher",      status: "queued", output: "" },
+      { role: "packager",      name: "Packager",      status: "queued", output: "" },
+    ];
+
+    const project: Project = {
+      id, name,
+      description: `Rebuilt from ${sourceFiles.length} source file${sourceFiles.length !== 1 ? "s" : ""}${instructions ? ". Instructions: " + instructions.slice(0, 120) : ""}`,
+      platform,
+      status: "building",
+      steps,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      imported: true,
+    };
+
+    persistProjects([project, ...projectsRef.current]);
+    setActiveBuildId(id);
+
+    (async () => {
+      let working = { ...project };
+
+      // Build a compact file summary (cap each file at 3000 chars to avoid huge prompts)
+      const filesSummary = sourceFiles
+        .map(f => `=== FILE: ${f.path} ===\n${f.content.slice(0, 3000)}${f.content.length > 3000 ? "\n...[truncated]" : ""}`)
+        .join("\n\n");
+
+      const markRunning = (idx: number): Project => {
+        const updated: Project = {
+          ...working,
+          steps: working.steps.map((s, i) => i === idx ? { ...s, status: "running" as const, startedAt: Date.now() } : s),
+          updatedAt: Date.now(),
+        };
+        working = updated;
+        updateProject(updated);
+        return updated;
+      };
+
+      const markDone = (idx: number, output: string): Project => {
+        const updated: Project = {
+          ...working,
+          steps: working.steps.map((s, i) => i === idx ? { ...s, status: "done" as const, output, finishedAt: Date.now() } : s),
+          updatedAt: Date.now(),
+        };
+        working = updated;
+        updateProject(updated);
+        return updated;
+      };
+
+      const markError = (idx: number, msg: string) => {
+        const updated: Project = {
+          ...working,
+          status: "failed" as const,
+          steps: working.steps.map((s, i) => i === idx ? { ...s, status: "error" as const, output: msg, finishedAt: Date.now() } : s),
+          updatedAt: Date.now(),
+        };
+        working = updated;
+        updateProject(updated);
+        setActiveBuildId(null);
+      };
+
+      const ai = (prompt: string) => callAI(
+        [{ role: "user", content: prompt }],
+        { groqKey: settingsRef.current.groqKey },
+      );
+
+      // ── Step 0: Analyzer ──
+      markRunning(0);
+      let analyzerOutput = "";
+      try {
+        analyzerOutput = await ai(
+          `You are a code analyst. Read the source files below and produce a thorough analysis of the application.
+
+SOURCE FILES:
+${filesSummary}
+
+Write a detailed analysis covering:
+1. APP PURPOSE & FEATURES — what does this app do? List every feature and user interaction.
+2. UI SCREENS — every screen/view with what it shows and what users can do
+3. DATA & STATE — what data does the app store/manage? How is it structured?
+4. BUSINESS LOGIC — key algorithms, rules, workflows
+5. TECH STACK — frameworks, libraries, patterns used
+6. WHAT MUST BE PRESERVED — anything unique or critical
+
+Be thorough. This analysis will be used to rebuild the entire app from scratch.`,
+        );
+        if (!analyzerOutput.trim()) throw new Error("Analyzer produced no output");
+        markDone(0, analyzerOutput);
+      } catch (err) {
+        markError(0, err instanceof Error ? err.message : "Analyzer failed");
+        return;
+      }
+
+      // ── Step 1: Reconstructor ──
+      markRunning(1);
+      let reconstructorOutput = "";
+      try {
+        reconstructorOutput = await ai(
+          `You are an expert frontend developer. Using the analysis of a real source code project below, rebuild the ENTIRE application as a complete, self-contained web app using only vanilla HTML, CSS, and JavaScript (no frameworks, no npm, no build tools).
+
+ANALYSIS OF THE ORIGINAL APP:
+${analyzerOutput}
+
+ORIGINAL SOURCE FILES (implement ALL features found here):
+${filesSummary}
+
+${instructions ? `SPECIAL INSTRUCTIONS FROM THE USER:\n${instructions}\n\n` : ""}REQUIREMENTS:
+- Output: index.html + styles.css + app.js — pure vanilla, no CDN frameworks unless absolutely needed
+- Must work by simply opening index.html in any browser, no server needed
+- Implement EVERY feature from the analysis — nothing skipped
+- Beautiful modern UI: dark theme, clean layout, smooth interactions
+- Full localStorage persistence for all data
+- Mobile-responsive with proper touch support
+- Production-quality: no placeholder text, no TODO comments, fully functional
+
+Output ONLY the files block with the complete code — no explanation:
+\`\`\`files
+{"files":[{"path":"index.html","content":"...complete HTML..."},{"path":"styles.css","content":"...complete CSS..."},{"path":"app.js","content":"...complete JS..."}]}
+\`\`\``,
+        );
+        if (!reconstructorOutput.trim()) throw new Error("Reconstructor produced no output");
+        // Validate files were extracted
+        const files = parseFilesFromText(reconstructorOutput);
+        if (files.length === 0) throw new Error("Reconstructor did not output a valid files block — retrying is recommended");
+        markDone(1, reconstructorOutput);
+      } catch (err) {
+        markError(1, err instanceof Error ? err.message : "Reconstructor failed");
+        return;
+      }
+
+      // ── Step 2: Polisher ──
+      markRunning(2);
+      let polisherOutput = "";
+      try {
+        polisherOutput = await ai(
+          `You are a senior frontend engineer and UI designer. Review the rebuilt application below, fix any bugs, and make it polished and production-ready.
+
+REBUILT APP:
+${reconstructorOutput.slice(0, 6000)}
+
+POLISH CHECKLIST:
+1. Fix any JavaScript errors, broken functions, or missing event handlers
+2. Improve UI: better spacing, typography, color contrast, hover states, transitions
+3. Ensure full mobile responsiveness and touch-friendliness
+4. Add missing UX details: loading states, empty states, confirmation dialogs
+5. Make sure ALL features from the original work correctly
+
+Output the COMPLETE improved files — include all three files in full:
+\`\`\`files
+{"files":[{"path":"index.html","content":"..."},{"path":"styles.css","content":"..."},{"path":"app.js","content":"..."}]}
+\`\`\``,
+        );
+        if (!polisherOutput.trim()) throw new Error("Polisher produced no output");
+        markDone(2, polisherOutput);
+      } catch (err) {
+        markError(2, err instanceof Error ? err.message : "Polisher failed");
+        return;
+      }
+
+      // ── Step 3: Packager — extract final files ──
+      markRunning(3);
+      try {
+        // Try polisher first, then reconstructor as fallback
+        let finalFiles = parseFilesFromText(polisherOutput);
+        if (finalFiles.length === 0) finalFiles = parseFilesFromText(reconstructorOutput);
+        if (finalFiles.length === 0) throw new Error("Could not extract files from rebuilt output");
+
+        markDone(3, `Packaged ${finalFiles.length} file${finalFiles.length !== 1 ? "s" : ""}: ${finalFiles.map(f => f.path).join(", ")}`);
+
+        const finalProject: Project = {
+          ...working,
+          status: "ready" as const,
+          files: finalFiles,
+          manifest: `${name.toLowerCase().replace(/\s+/g, "-")}-rebuilt-1.0.0`,
+          updatedAt: Date.now(),
+        };
+        working = finalProject;
+        updateProject(finalProject);
+        setActiveBuildId(null);
+
+        if (settingsRef.current.selfUpgrading) {
+          const mem: MemoryEntry = {
+            id: newId("mem-"),
+            type: "solution",
+            title: `Rebuild: ${name}`,
+            body: `Successfully rebuilt "${name}" from ${sourceFiles.length} source files on ${platform}.`,
+            tags: ["rebuild", platform, "auto"],
+            autoInclude: true,
+            createdAt: Date.now(),
+          };
+          const exists = memoriesRef.current.some(m => m.title.toLowerCase() === mem.title.toLowerCase());
+          if (!exists) persistMemories([mem, ...memoriesRef.current]);
+        }
+      } catch (err) {
+        markError(3, err instanceof Error ? err.message : "Packager failed");
+      }
+    })();
+
+    return id;
+  }, [persistProjects, updateProject, persistMemories]);
 
   // ── Build retry helper ──
   async function runAgentWithRetry(
@@ -1328,7 +1544,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     <StudioContext.Provider value={{
       ready, projects, memories, settings, modules, trainingState,
       chatHistory, activeBuildId, agentPrompts, upgradeHistory,
-      startBuild, rebuildFromStep, deleteProject, getProject, updateProjectFiles, importProject, pushToGithub,
+      startBuild, rebuildFromStep, deleteProject, getProject, updateProjectFiles, importProject, startRebuild, pushToGithub,
       addUserMessage, addAssistantMessage, updateLastAssistantMessage, clearChat, sendChat,
       addMemory, removeMemory,
       updateSettings,
