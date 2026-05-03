@@ -270,10 +270,19 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
 
       const tryParse = (text: string): UpgradeProposal[] | null => {
         const jsonStr = extractJsonArray(text);
-        if (!jsonStr) return null;
+        if (jsonStr) {
+          try {
+            const parsed = JSON.parse(jsonStr) as UpgradeProposal[];
+            return Array.isArray(parsed) ? parsed : null;
+          } catch {
+            return null;
+          }
+        }
+        const objectText = extractJsonObject(text);
+        if (!objectText) return null;
         try {
-          const parsed = JSON.parse(jsonStr) as UpgradeProposal[];
-          return Array.isArray(parsed) ? parsed : null;
+          const parsed = JSON.parse(objectText) as UpgradeProposal;
+          return parsed ? [parsed] : null;
         } catch {
           return null;
         }
@@ -297,7 +306,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
       }
 
       if (!parsed || parsed.length === 0) {
-        setError("AI returned a non-JSON response. Try Generate Upgrade Proposals again, or switch to Groq if you have a key.");
+        setError("AI response could not be parsed. Try Generate Upgrade Proposals again, or switch to Groq if you have a key.");
         return;
       }
 
