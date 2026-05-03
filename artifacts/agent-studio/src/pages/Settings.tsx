@@ -72,40 +72,36 @@ export default function SettingsPage() {
     setTesting(true);
     setHealth({ pollinations: "checking", groq: "checking", github: "checking" });
 
-    const [polOk] = await Promise.all([
+    const [polOk, groqOk, githubOk] = await Promise.all([
       pingPollinations(),
+      (async () => {
+        if (settings.groqKey.trim().length <= 20) return true;
+        try {
+          const res = await fetch("https://api.groq.com/openai/v1/models", {
+            headers: { Authorization: `Bearer ${settings.groqKey}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          return res.ok;
+        } catch {
+          return false;
+        }
+      })(),
+      (async () => {
+        if (settings.githubToken.trim().length <= 10) return true;
+        try {
+          const res = await fetch("https://api.github.com/user", {
+            headers: { Authorization: `Bearer ${settings.githubToken}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          return res.ok;
+        } catch {
+          return false;
+        }
+      })(),
     ]);
     setHealth(h => ({ ...h, pollinations: polOk ? "ok" : "fail" }));
-
-    // Groq check
-    if (settings.groqKey.trim().length > 20) {
-      try {
-        const res = await fetch("https://api.groq.com/openai/v1/models", {
-          headers: { Authorization: `Bearer ${settings.groqKey}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        setHealth(h => ({ ...h, groq: res.ok ? "ok" : "fail" }));
-      } catch {
-        setHealth(h => ({ ...h, groq: "fail" }));
-      }
-    } else {
-      setHealth(h => ({ ...h, groq: "idle" }));
-    }
-
-    // GitHub check
-    if (settings.githubToken.trim().length > 10) {
-      try {
-        const res = await fetch("https://api.github.com/user", {
-          headers: { Authorization: `Bearer ${settings.githubToken}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        setHealth(h => ({ ...h, github: res.ok ? "ok" : "fail" }));
-      } catch {
-        setHealth(h => ({ ...h, github: "fail" }));
-      }
-    } else {
-      setHealth(h => ({ ...h, github: "idle" }));
-    }
+    setHealth(h => ({ ...h, groq: groqOk ? "ok" : "fail" }));
+    setHealth(h => ({ ...h, github: githubOk ? "ok" : "fail" }));
 
     setTesting(false);
   };
