@@ -88,8 +88,8 @@ export async function pingPollinations(): Promise<boolean> {
 function localFallback(messages: Message[], onChunk?: (fullText: string) => void): string {
   const last = messages.slice().reverse().find(m => m.role === "user")?.content ?? "";
   const reply = [
-    "I’m running in offline fallback mode.",
-    "I can still help with simple structured responses, summaries, and app guidance.",
+    "I’m in fallback mode.",
+    "I can still help with summaries and app guidance.",
     last ? `I received: ${last.slice(0, 240)}` : "",
   ].filter(Boolean).join("\n");
   onChunk?.(reply);
