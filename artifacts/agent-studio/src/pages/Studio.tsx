@@ -20,7 +20,7 @@ const AGENT_COLORS: Record<string, string> = {
 const PRESETS = [
   { label: "Todo App", description: "A todo list with categories, due dates, and local storage", platform: "web" as Platform },
   { label: "AI Companion", description: "An adult AI companion app with persistent memory, personality modes, and unrestricted conversation. Private and unfiltered.", platform: "web" as Platform },
-  { label: "Android Chat", description: "An Android messaging app with contacts, chat threads, and notifications using Jetpack Compose", platform: "android" as Platform },
+  { label: "Android Chat", description: "A mobile chat app with contacts, chat threads, and notifications — installable on Android from Chrome", platform: "android" as Platform },
 ];
 
 function StepCard({ step, index, onRebuild }: { step: AgentStep; index: number; onRebuild?: () => void }) {
