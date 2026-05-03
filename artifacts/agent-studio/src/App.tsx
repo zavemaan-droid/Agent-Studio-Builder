@@ -13,6 +13,7 @@ import SettingsPage from "@/pages/Settings";
 import DashboardPage from "@/pages/Dashboard";
 import AgentsPage from "@/pages/Agents";
 import LibraryPage from "@/pages/Library";
+import EditorPage from "@/pages/Editor";
 
 function AppLayout() {
   return (
@@ -35,6 +36,7 @@ function AppLayout() {
           <Route path="/library"    component={LibraryPage} />
           <Route path="/training"   component={TrainingPage} />
           <Route path="/settings"   component={SettingsPage} />
+          <Route path="/editor"     component={EditorPage} />
           <Route>
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground text-sm">Page not found</p>

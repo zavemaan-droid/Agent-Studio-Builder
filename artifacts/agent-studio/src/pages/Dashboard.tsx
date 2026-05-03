@@ -522,7 +522,7 @@ Make 4 substantive improvements. Do not add markdown. Start with [ immediately.`
               <Smartphone className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
                 <p className="text-xs font-medium">Android App</p>
-                <p className="text-[10px] text-muted-foreground">Kotlin + Compose</p>
+                <p className="text-[10px] text-muted-foreground">PWA · Installable</p>
               </div>
             </button>
           </div>

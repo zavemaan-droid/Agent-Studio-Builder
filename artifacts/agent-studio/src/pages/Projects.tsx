@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useStudio } from "@/contexts/StudioContext";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
-  Globe, Smartphone, Trash2, Eye, Download, RefreshCw,
+  Globe, Smartphone, Trash2, Download, RefreshCw,
   X, ExternalLink, CheckCircle2, Loader2, AlertCircle,
   ChevronRight, Monitor, Tablet, Code2, Github, Play,
-  FileCode, Copy, Check
+  FileCode, Copy, Check, Archive, Info, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@/lib/types";
@@ -18,6 +19,33 @@ const VIEWPORT_SIZES: Record<Viewport, { w: number; label: string; icon: React.E
   tablet: { w: 768, label: "Tablet", icon: Tablet },
   mobile: { w: 390, label: "Mobile", icon: Smartphone },
 };
+
+// ── Download all project files as a .zip ──
+async function downloadAsZip(files: { path: string; content: string }[], projectName: string) {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  for (const f of files) {
+    zip.file(f.path, f.content);
+  }
+  // For web apps, also include a self-contained single-file build
+  const hasHtml = files.some(f => f.path.endsWith(".html"));
+  const hasJs   = files.some(f => f.path.endsWith(".js"));
+  const hasCss  = files.some(f => f.path.endsWith(".css"));
+  const hasManifest = files.some(f => f.path === "manifest.json");
+  if (hasHtml && hasJs && !hasManifest) {
+    // Web app: add a single-file standalone version
+    zip.file("_standalone.html", buildSelfContained(files));
+  }
+  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${projectName.replace(/\s+/g, "-").toLowerCase()}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 15000);
+  void hasCss; // suppress unused warning
+}
 
 // ── Inline all CSS/JS into a single self-contained HTML document ──
 function buildSelfContained(files: { path: string; content: string }[]): string {
@@ -65,7 +93,7 @@ function buildSelfContained(files: { path: string; content: string }[]): string 
 function PreviewModal({ project, onClose }: { project: Project; onClose: () => void }) {
   const { pushToGithub, settings } = useStudio();
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
-  const [viewport, setViewport] = useState<Viewport>("desktop");
+  const [viewport, setViewport] = useState<Viewport>(project.platform === "android" ? "mobile" : "desktop");
   const [activeFile, setActiveFile] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [pushing, setPushing] = useState(false);
@@ -74,11 +102,13 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
 
   const files = project.files ?? [];
 
-  // Build self-contained HTML once (memoized)
+  // Build self-contained HTML once (memoized) — works for both web and android PWA
   const selfContainedHtml = useMemo(() => {
-    if (project.platform !== "web" || files.length === 0) return null;
+    if (files.length === 0) return null;
+    const hasHtml = files.some(f => f.path.endsWith(".html"));
+    if (!hasHtml) return null;
     return buildSelfContained(files);
-  }, [files, project.platform]);
+  }, [files]);
 
   // Blob URL refreshes with refreshKey
   const blobUrl = useMemo(() => {
@@ -110,22 +140,9 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
     if (win) setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
-  const downloadHtml = () => {
-    if (selfContainedHtml) {
-      // Single self-contained HTML
-      const blob = new Blob([selfContainedHtml], { type: "text/html" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${project.name.replace(/\s+/g, "-").toLowerCase()}.html`;
-      a.click();
-    } else if (files.length > 0) {
-      // Android — download all files as concatenated text
-      const content = files.map(f => `// ===== ${f.path} =====\n${f.content}`).join("\n\n");
-      const blob = new Blob([content], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${project.name.replace(/\s+/g, "-").toLowerCase()}.kt`;
-      a.click();
+  const downloadZip = () => {
+    if (files.length > 0) {
+      void downloadAsZip(files, project.name);
     }
   };
 
@@ -202,11 +219,12 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
           )}
 
           <button
-            onClick={downloadHtml}
-            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Download"
+            onClick={downloadZip}
+            className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground text-xs"
+            title="Download ZIP"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Archive className="w-3.5 h-3.5" />
+            .zip
           </button>
 
           {(settings.githubToken || true) && (
@@ -267,8 +285,8 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
           </button>
         </div>
 
-        {/* Viewport switcher (only for web preview) */}
-        {activeTab === "preview" && project.platform === "web" && (
+        {/* Viewport switcher (web and android PWA) */}
+        {activeTab === "preview" && (
           <div className="flex items-center gap-0 bg-muted/40 rounded-lg p-0.5">
             {(Object.entries(VIEWPORT_SIZES) as [Viewport, typeof VIEWPORT_SIZES[Viewport]][]).map(([key, val]) => {
               const Icon = val.icon;
@@ -324,62 +342,56 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
       )}
 
       {/* ── Main content area ── */}
-      <div className="flex-1 overflow-hidden bg-muted/30 flex items-start justify-center">
-        {activeTab === "preview" && project.platform === "web" ? (
-          blobUrl ? (
-            <div
-              className="h-full bg-white shadow-2xl transition-all duration-300 overflow-hidden"
-              style={{
-                width: viewport === "desktop" ? "100%" : `${vpSize.w}px`,
-                maxWidth: viewport === "desktop" ? "100%" : `${vpSize.w}px`,
-              }}
-            >
-              <iframe
-                key={`${refreshKey}-${viewport}`}
-                src={blobUrl}
-                className="w-full h-full border-0"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
-                title={`Preview: ${project.name}`}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
-              <Globe className="w-12 h-12 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">No preview available — build may still be running.</p>
-            </div>
-          )
-        ) : activeTab === "preview" && project.platform === "android" ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 gap-4 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-              <Smartphone className="w-8 h-8 text-emerald-400" />
-            </div>
-            <p className="text-sm font-semibold">Android App</p>
-            <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-              Android apps run on a physical device or emulator. Switch to <strong>Code</strong> view to see the generated Kotlin files, then copy them into Android Studio.
+      <div className="flex-1 overflow-hidden bg-muted/30 flex flex-col">
+        {/* Android PWA install tip */}
+        {activeTab === "preview" && project.platform === "android" && (
+          <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 flex items-start gap-2 shrink-0">
+            <Info className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
+            <p className="text-[11px] text-emerald-300 leading-relaxed">
+              <strong>Install on Android:</strong> Download the ZIP → extract all files to one folder → open index.html in Chrome → tap menu → "Add to Home Screen". Works offline, no app store or emulator needed.
             </p>
-            <Button size="sm" onClick={() => setActiveTab("code")}>
-              <Code2 className="w-3.5 h-3.5 mr-1.5" />
-              View Kotlin Code
-            </Button>
-            <Button size="sm" variant="outline" onClick={downloadHtml}>
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              Download .kt Files
-            </Button>
-          </div>
-        ) : (
-          // Code view
-          <div className="w-full h-full overflow-auto bg-[#0d1117] font-mono">
-            {files.length > 0 ? (
-              <pre className="text-[12px] leading-[1.7] text-[#c9d1d9] p-6 whitespace-pre-wrap break-words">
-                <code>{files[activeFile]?.content ?? ""}</code>
-              </pre>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                No files generated yet.
-              </div>
-            )}
           </div>
         )}
+
+        <div className="flex-1 overflow-hidden flex items-start justify-center">
+          {activeTab === "preview" ? (
+            blobUrl ? (
+              <div
+                className="h-full bg-white shadow-2xl transition-all duration-300 overflow-hidden"
+                style={{
+                  width: viewport === "desktop" ? "100%" : `${vpSize.w}px`,
+                  maxWidth: viewport === "desktop" ? "100%" : `${vpSize.w}px`,
+                }}
+              >
+                <iframe
+                  key={`${refreshKey}-${viewport}`}
+                  src={blobUrl}
+                  className="w-full h-full border-0"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+                  title={`Preview: ${project.name}`}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
+                <Globe className="w-12 h-12 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">No preview available — build may still be running.</p>
+              </div>
+            )
+          ) : (
+            // Code view
+            <div className="w-full h-full overflow-auto bg-[#0d1117] font-mono">
+              {files.length > 0 ? (
+                <pre className="text-[12px] leading-[1.7] text-[#c9d1d9] p-6 whitespace-pre-wrap break-words">
+                  <code>{files[activeFile]?.content ?? ""}</code>
+                </pre>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  No files generated yet.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -388,6 +400,7 @@ function PreviewModal({ project, onClose }: { project: Project; onClose: () => v
 // ── Project card ──
 function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => void }) {
   const { pushToGithub, settings, rebuildFromStep } = useStudio();
+  const [, setLocation] = useLocation();
   const [rebuilding, setRebuilding] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
@@ -399,22 +412,7 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
   const handleDownload = () => {
     const files = project.files ?? [];
     if (files.length === 0) return;
-
-    if (project.platform === "web") {
-      const html = buildSelfContained(files);
-      const blob = new Blob([html], { type: "text/html" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${project.name.replace(/\s+/g, "-").toLowerCase()}.html`;
-      a.click();
-    } else {
-      const content = files.map(f => `// ===== ${f.path} =====\n${f.content}`).join("\n\n");
-      const blob = new Blob([content], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${project.name.replace(/\s+/g, "-").toLowerCase()}.kt`;
-      a.click();
-    }
+    void downloadAsZip(files, project.name);
   };
 
   const handleGithubPush = async () => {
@@ -537,49 +535,47 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: () => 
 
         {/* Action buttons — always visible for ready projects */}
         {project.status === "ready" && (
-          <div className="border-t border-border/50 grid grid-cols-3 divide-x divide-border/50">
-            {project.platform === "web" ? (
+          <div className="border-t border-border/50">
+            {/* Primary actions */}
+            <div className="grid grid-cols-4 divide-x divide-border/50">
               <button
                 onClick={() => setPreviewOpen(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-primary hover:bg-primary/8 transition-colors"
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-primary hover:bg-primary/8 transition-colors"
                 data-testid={`preview-${project.id}`}
               >
-                <Play className="w-3.5 h-3.5" />
+                <Play className="w-3 h-3" />
                 Preview
               </button>
-            ) : (
+
               <button
-                onClick={() => setPreviewOpen(true)}
-                className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
-                data-testid={`code-${project.id}`}
+                onClick={() => setLocation(`/editor?id=${project.id}`)}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-violet-400 hover:bg-violet-500/8 transition-colors"
+                data-testid={`edit-${project.id}`}
               >
-                <Code2 className="w-3.5 h-3.5" />
-                Code
+                <Pencil className="w-3 h-3" />
+                Edit
               </button>
-            )}
 
-            <button
-              onClick={handleDownload}
-              disabled={!project.files || project.files.length === 0}
-              className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors disabled:opacity-40"
-              data-testid={`download-${project.id}`}
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download
-            </button>
+              <button
+                onClick={handleDownload}
+                disabled={!project.files || project.files.length === 0}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors disabled:opacity-40"
+                data-testid={`download-${project.id}`}
+              >
+                <Archive className="w-3 h-3" />
+                .zip
+              </button>
 
-            <button
-              onClick={handleGithubPush}
-              disabled={pushing}
-              className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors disabled:opacity-40"
-              data-testid={`github-${project.id}`}
-            >
-              {pushing
-                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : <Github className="w-3.5 h-3.5" />
-              }
-              GitHub
-            </button>
+              <button
+                onClick={handleGithubPush}
+                disabled={pushing}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors disabled:opacity-40"
+                data-testid={`github-${project.id}`}
+              >
+                {pushing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Github className="w-3 h-3" />}
+                GitHub
+              </button>
+            </div>
           </div>
         )}
 

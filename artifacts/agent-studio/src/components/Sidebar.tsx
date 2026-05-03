@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useStudio } from "@/contexts/StudioContext";
 import {
   Zap, MessageSquare, FolderOpen, Brain, GraduationCap, Settings,
-  ChevronLeft, ChevronRight, Circle, LayoutDashboard, Bot, BookOpen, Plus
+  ChevronLeft, ChevronRight, Circle, LayoutDashboard, Bot, BookOpen, Plus, Code2
 } from "lucide-react";
 import { useState } from "react";
 
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/studio",    label: "Studio",    icon: Zap },
   { href: "/projects",  label: "Projects",  icon: FolderOpen },
+  { href: "/editor",    label: "Editor",    icon: Code2 },
   { href: "/agents",    label: "Agents",    icon: Bot },
   { href: "/memory",    label: "Memory",    icon: Brain },
   { href: "/library",   label: "Library",   icon: BookOpen },

@@ -35,8 +35,8 @@ const SEED_MEMORIES: MemoryEntry[] = [
   },
   {
     id: "mem-seed-2", type: "doc", title: "Android Preference",
-    body: "For Android apps: use Kotlin with Jetpack Compose. Target API 33+.",
-    tags: ["android", "stack"], autoInclude: true, createdAt: Date.now(),
+    body: "For Android apps: build a Progressive Web App (PWA) using HTML5, CSS3, and vanilla JavaScript. Generate index.html, styles.css, app.js, manifest.json, and sw.js. Mobile-first design, installable from Chrome via Add to Home Screen. No emulator, no Android Studio, no compilation needed.",
+    tags: ["android", "pwa", "stack"], autoInclude: true, createdAt: Date.now(),
   },
 ];
 
@@ -276,16 +276,17 @@ Architect's plan:
 {previousOutputs}
 
 Rules:
-- Generate 2-4 complete source files — every line of code must be real and working
+- Generate every required source file — every line must be real and working
 - ZERO TODO comments, ZERO placeholder functions, ZERO stub implementations
 - Include all state management, localStorage persistence, and error handling
-- For web apps: produce beautiful CSS — dark theme, rounded cards, smooth transitions, not just bare HTML
+- Produce beautiful CSS — dark theme, rounded cards, smooth transitions, polished UI
 - Make it feel like a real polished app, not a prototype
 
-Output format:
+CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
 \`\`\`files
 {"files":[{"path":"index.html","content":"...complete code..."},{"path":"styles.css","content":"..."},{"path":"app.js","content":"..."}],"summary":"What was built"}
-\`\`\``,
+\`\`\`
+Every file must be 100% complete. Never truncate. Never use placeholders.`,
 
   designer: `You are the UI Designer agent. Your sole job is to make "{description}" look polished and professional.
 
@@ -294,16 +295,16 @@ Current code from the Builder:
 
 Improvements to make:
 - Refine color palette, typography, and spacing for visual hierarchy
-- Add loading states, empty states, and hover effects
+- Add loading states, empty states, and hover/active effects
 - Add smooth CSS transitions and micro-animations
-- Improve mobile responsiveness (works on any screen size)
-- Replace any plain/ugly UI elements with polished versions
+- Improve mobile responsiveness — works perfectly on any screen size
+- Replace any plain/ugly UI elements with polished, production-quality versions
 
 CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
 \`\`\`files
 {"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"}],"summary":"What was improved"}
 \`\`\`
-Keep ALL existing functionality intact — only improve visuals. Every file must be complete, no truncation.`,
+Keep ALL existing functionality intact — only improve visuals. Every file must be complete and untruncated.`,
 
   qa: `You are the QA agent. Your job is to find and fix every bug in the code for: "{description}".
 
@@ -314,31 +315,40 @@ Systematically fix ALL of these:
 - JavaScript runtime errors, null/undefined crashes, missing null checks
 - Missing error handling (wrap fetch, localStorage, JSON.parse in try/catch)
 - Edge cases: empty lists, invalid input, network failure, 0/NaN values
-- Broken or missing event listeners
+- Broken or missing event listeners, broken references between files
 - Any async code that could reject without a catch
 
 CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
 \`\`\`files
 {"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"}],"summary":"Bugs fixed"}
 \`\`\`
-Every file must be complete and untruncated. Every bug must be fixed.`,
+Every file must be complete and untruncated. Every bug must be fixed. Return every file even if unchanged.`,
 
-  packager: `You are the Packager agent. Finalise and polish the app: "{description}" for {platform}.
+  packager: `You are the Packager agent. Finalise and deliver the app: "{description}" for {platform}.
 
 Final code to package:
 {previousOutputs}
 
-Tasks:
+Tasks for ALL platforms:
 - Remove ALL debug console.log statements
-- Add proper <title>, meta description, and viewport tag (web) or manifest comments (android)
-- Verify all files correctly reference each other (script/link tags, imports)
+- Verify all files correctly reference each other (script src, link href, imports)
 - Ensure the app starts without errors and is immediately usable
 - Add a one-line comment at the top of each file describing its purpose
 
+Additional tasks for web platform:
+- Add proper <title>, meta description, and <meta name="viewport" content="width=device-width,initial-scale=1">
+
+Additional tasks for android platform (PWA):
+- Ensure manifest.json is valid JSON with: name, short_name, start_url ("." or "/"), display ("standalone"), theme_color, background_color
+- Ensure sw.js uses a cache-first strategy: on "install" cache ["index.html","styles.css","app.js","manifest.json"]; on "fetch" return cache match or fetch
+- Ensure index.html <head> has: <link rel="manifest" href="manifest.json">, <meta name="theme-color">, <meta name="mobile-web-app-capable" content="yes">
+- Ensure index.html registers the service worker: <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));}</script>
+
 CRITICAL — return ALL files in this EXACT JSON format, no other format accepted:
 \`\`\`files
-{"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"}],"summary":"App name and what it does"}
+{"files":[{"path":"index.html","content":"FULL FILE CONTENT HERE"},{"path":"styles.css","content":"FULL FILE CONTENT HERE"},{"path":"app.js","content":"FULL FILE CONTENT HERE"},{"path":"manifest.json","content":"FULL FILE CONTENT HERE"},{"path":"sw.js","content":"FULL FILE CONTENT HERE"}],"summary":"App name and what it does"}
 \`\`\`
+(Web apps: omit manifest.json and sw.js from the array. Android PWA: include all 5 files.)
 These files go directly to John. Every file must be complete, production-ready, and untruncated.`,
 };
 
@@ -351,8 +361,15 @@ function resolvePrompt(
   customPrompts: AgentPrompts,
 ): string {
   const stack = platform === "web"
-    ? "HTML, CSS, and vanilla JavaScript"
-    : "Kotlin + Jetpack Compose";
+    ? "HTML, CSS, and vanilla JavaScript (single-page, self-contained)"
+    : `HTML5, CSS3, and vanilla JavaScript as a Progressive Web App (PWA) for Android.
+REQUIRED — generate ALL 5 files:
+1. index.html — app shell with <meta name="viewport">, <link rel="manifest" href="manifest.json">, inline service-worker registration
+2. styles.css — mobile-first, touch-friendly (min 44px tap targets), dark Material-inspired theme, smooth transitions
+3. app.js — complete app logic, localStorage persistence, no external dependencies
+4. manifest.json — valid JSON: {"name":"<App Name>","short_name":"<App>","start_url":".","display":"standalone","theme_color":"#1a1a2e","background_color":"#0f0f1a"}
+5. sw.js — service worker: cache-first strategy, caches index.html/styles.css/app.js on install
+The app opens in Chrome on Android and installs via "Add to Home Screen" — zero compilation, zero emulator, zero app store.`;
   const template = customPrompts[role] ?? DEFAULT_AGENT_PROMPTS[role] ?? "";
   return template
     .replace(/\{description\}/g, description)
@@ -432,6 +449,7 @@ interface Ctx {
   rebuildFromStep: (projectId: string, fromStepIndex: number) => void;
   deleteProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
+  updateProjectFiles: (projectId: string, files: { path: string; content: string }[]) => void;
   pushToGithub: (projectId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
 
   // Chat
@@ -583,6 +601,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   // ── Update project in place ──
   const updateProject = useCallback((updated: Project) => {
     const next = projectsRef.current.map(p => p.id === updated.id ? updated : p);
+    persistProjects(next);
+  }, [persistProjects]);
+
+  const updateProjectFiles = useCallback((projectId: string, files: { path: string; content: string }[]) => {
+    const next = projectsRef.current.map(p =>
+      p.id === projectId ? { ...p, files, updatedAt: Date.now() } : p
+    );
     persistProjects(next);
   }, [persistProjects]);
 
@@ -1231,7 +1256,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     <StudioContext.Provider value={{
       ready, projects, memories, settings, modules, trainingState,
       chatHistory, activeBuildId, agentPrompts, upgradeHistory,
-      startBuild, rebuildFromStep, deleteProject, getProject, pushToGithub,
+      startBuild, rebuildFromStep, deleteProject, getProject, updateProjectFiles, pushToGithub,
       addUserMessage, addAssistantMessage, updateLastAssistantMessage, clearChat, sendChat,
       addMemory, removeMemory,
       updateSettings,
