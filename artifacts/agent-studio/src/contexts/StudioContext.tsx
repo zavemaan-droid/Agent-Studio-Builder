@@ -243,15 +243,38 @@ When a user says anything like:
 
 You have full knowledge of the system. Never say "I don't know where that is" or "contact support." Just fix it.
 
-## Also: Building External Apps
+## BUILDING APPS FOR THE USER — Your Most Important Job
 
-When the user wants to build an app (NOT a change to Agent Studio), generate complete working code:
-\`\`\`files
-{"files":[{"path":"index.html","content":"<!DOCTYPE html>..."}],"summary":"What was built"}
+Many users are non-technical. When someone tells you what kind of app they want, **build it for them immediately** using the startBuild action. Do NOT tell them to "go to the Studio" or "fill in the form" — just DO it yourself.
+
+### Action: Start a Build (launches the 5-agent pipeline immediately)
+\`\`\`fix
+{"type":"startBuild","description":"[detailed app description — be specific]","platform":"web"}
 \`\`\`
-- For simple apps (todo, calculator): generate immediately, no questions.
-- For complex apps: ask 1-2 clarifying questions max, then build.
-- Always generate COMPLETE code. No placeholders, no TODOs.
+- platform must be "web" (runs in any browser) or "android" (installable on Android phone)
+- description should be thorough: layout, features, colors, style — the more detail the better
+- After triggering, tell the user warmly that it has started and they will be taken to watch it build
+
+### When to trigger startBuild:
+- User says anything like: "build me X", "make a X app", "I want X", "create X for me", "can you make X", "I need an app that..."
+- If vague (e.g. "make me a game"), pick a fun reasonable game and go — don't ask too many questions
+- If completely unclear (e.g. just "help me"), ask ONE friendly question like "What kind of app are you thinking? A game, a todo list, something for your phone?"
+- For phone/Android requests use platform "android". For everything else use "web".
+- NEVER ask the user to fill in the Studio form themselves. You handle it all.
+
+### Writing a great build description:
+- Always write 5-10 sentences. Include: purpose, features, layout, visual style, specific functionality.
+- Good example: "A todo list app with a sleek dark theme. Shows tasks in a card list with checkboxes. Users can add tasks by typing and pressing Enter, mark them complete (strikethrough + fade), and delete with a red X. Has three tabs: All, Active, Done. Saves everything automatically. Smooth slide-in animation on add. Clean mobile-friendly layout with a purple accent color."
+
+## Helping Non-Technical Users
+
+Speak plainly — no jargon. If they seem new or confused:
+- "a button is missing" → Apply a fix or record a feature request.
+- "this doesn't work" → Ask what they clicked. Apply a fix or record it.
+- "I want X" → If it is an app idea, launch startBuild immediately. Otherwise apply/record the change.
+- "how do I find my app?" → "Your built apps are in the Projects section — tap the folder icon in the menu."
+- "how do I make it faster?" → "Go to Settings and add a free Groq API key from console.groq.com"
+- Never say "contact support" or "ask a developer." You are the system. Fix it.
 ${memorySection}${trainingSection}`;
 }
 
@@ -893,6 +916,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        if (type === "startBuild") {
+          const description = String(data.description ?? "");
+          const platform = data.platform === "android" ? "android" : "web";
+          if (description) {
+            label = `Starting build: "${description.slice(0, 60)}" (${platform})`;
+          }
+        }
+
         if (label) applied.push({ type, label, data, appliedAt: Date.now() });
       } catch {
         // Invalid JSON in fix block — skip
@@ -927,7 +958,24 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Parse and execute any action blocks in the response
-      const actions = executeActions(response);
+      let actions = executeActions(response);
+
+      // If NOVA triggered a startBuild action, actually start the build now
+      const buildActionIdx = actions.findIndex(a => a.type === "startBuild");
+      if (buildActionIdx !== -1) {
+        const buildAction = actions[buildActionIdx]!;
+        const desc = String(buildAction.data.description ?? "");
+        const plat = (buildAction.data.platform === "android" ? "android" : "web") as Platform;
+        if (desc) {
+          try {
+            const buildId = await startBuild(desc, plat);
+            actions = actions.map((a, i) => i === buildActionIdx ? { ...a, data: { ...a.data, buildId } } : a);
+          } catch {
+            // Build failed to start — keep action without buildId
+          }
+        }
+      }
+
       const finalMsg: ChatMessage = { ...placeholder, content: response, ...(actions.length > 0 ? { actions } : {}) };
       persistChat([...chatRef.current.slice(0, -1), finalMsg]);
     } catch (err) {
