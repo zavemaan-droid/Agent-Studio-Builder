@@ -56,7 +56,7 @@ export default function TrainingPage() {
             <div>
               <h1 className="text-base font-semibold">Agent Training</h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Train your agents to build better apps. Completed lessons are saved to Agent Memory.
+                Train NOVA to get smarter. Learned lessons help it answer better, ask fewer questions, and build apps more like you want.
               </p>
             </div>
           </div>
@@ -103,12 +103,12 @@ export default function TrainingPage() {
           </button>
           {showHowItWorks && (
             <p className="text-xs text-muted-foreground leading-relaxed">
-              AI generates lesson content → You read and learn → Mark complete → Knowledge saved to Agent Memory → Agents use it in builds. Old lessons are replaced with new for continuous improvement.
+              When you finish lessons, NOVA remembers the useful parts and uses them in chats and future builds. This helps it give clearer answers and better results.
             </p>
           )}
           {!showHowItWorks && (
             <p className="text-xs text-muted-foreground">
-              AI generates lesson content → You read and learn → Mark complete → Knowledge saved to Agent Memory → Agents use it in builds.
+              Finish lessons to make NOVA smarter and more helpful.
             </p>
           )}
         </div>
@@ -233,7 +233,7 @@ export default function TrainingPage() {
                     ) : (
                       <div className="flex items-center gap-2 text-xs text-emerald-400">
                         <Sparkles className="w-3.5 h-3.5" />
-                        Module complete — knowledge added to Memory Bank. New advanced lessons may have been added.
+                        Module complete — NOVA learned from this module and may add new advanced lessons.
                       </div>
                     )}
                   </div>
