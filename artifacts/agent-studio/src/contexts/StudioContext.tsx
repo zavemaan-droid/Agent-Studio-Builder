@@ -25,7 +25,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   voiceRate: 0.88,    // deliberate, authoritative pace
   voicePitch: 0.80,   // deep, JARVIS-like tone
   wakeWordEnabled: false, // "Hey NOVA" always-on wake word
-  activeCompanionId: "nova",
 };
 
 const SEED_MEMORIES: MemoryEntry[] = [

@@ -66,7 +66,6 @@ export interface AppSettings {
   voiceRate: number;
   voicePitch: number;
   wakeWordEnabled: boolean;
-  activeCompanionId: string;
 }
 
 export interface AssistantAction {
