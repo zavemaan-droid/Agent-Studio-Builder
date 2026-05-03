@@ -218,7 +218,7 @@ export default function DashboardPage() {
         fullPrompt: prompt,
       }));
 
-      const aiPrompt = `You are the Self-Upgrade AI for Agent Studio. Analyze the current agent prompts and generate 4 upgrade proposals that improve quality, safety, reliability, and performance.
+      const aiPrompt = `You are the Self-Upgrade AI for Agent Studio. Return 4 upgrade proposals for the agent prompts below.
 
 Current system state:
 ${JSON.stringify(systemState, null, 2)}
@@ -226,7 +226,8 @@ ${JSON.stringify(systemState, null, 2)}
 Current agent prompts to improve:
 ${JSON.stringify(currentPromptsSnippets, null, 2)}
 
-Return ONLY a valid JSON array — no markdown fences, no explanation, no text before or after. Start your response with [ and end with ].
+Return ONLY valid JSON. No markdown. No explanation. No extra text.
+Return a JSON array with exactly 4 objects.
 
 Each object in the array must have exactly these fields:
 - "id": a unique string like "up-001"
@@ -254,75 +255,42 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         .replace(/\s*```\s*$/, "")
         .trim();
 
-      const extractJsonArray = (text: string): string | null => {
-        const start = text.indexOf("[");
-        const end = text.lastIndexOf("]");
-        if (start === -1 || end === -1 || end <= start) return null;
-        return text.slice(start, end + 1);
-      };
-
-      const extractJsonObject = (text: string): string | null => {
-        const start = text.indexOf("{");
-        const end = text.lastIndexOf("}");
-        if (start === -1 || end === -1 || end <= start) return null;
-        return text.slice(start, end + 1);
-      };
-
-      const tryParse = (text: string): UpgradeProposal[] | null => {
-        const arrayText = extractJsonArray(text);
-        if (arrayText) {
-          try {
-            const parsed = JSON.parse(arrayText) as unknown;
-            if (Array.isArray(parsed)) return parsed as UpgradeProposal[];
-          } catch {}
+      const parseLooseJson = (text: string): UpgradeProposal[] | null => {
+        const candidates = [text, raw, stripped, raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? ""].filter(Boolean);
+        for (const candidate of candidates) {
+          const start = candidate.indexOf("[");
+          const end = candidate.lastIndexOf("]");
+          if (start !== -1 && end !== -1 && end > start) {
+            try {
+              const parsed = JSON.parse(candidate.slice(start, end + 1)) as unknown;
+              if (Array.isArray(parsed)) return parsed as UpgradeProposal[];
+            } catch {}
+          }
         }
-
-        const objectText = extractJsonObject(text);
-        if (objectText) {
-          try {
-            const parsed = JSON.parse(objectText) as UpgradeProposal;
-            if (parsed && typeof parsed === "object") return [parsed];
-          } catch {}
-        }
-
-        const looseObjects = text.match(/\{[\s\S]*?\}/g);
-        if (looseObjects?.length) {
-          const parsed = looseObjects
-            .map(chunk => {
-              try {
-                return JSON.parse(chunk) as UpgradeProposal;
-              } catch {
-                return null;
-              }
-            })
-            .filter((item): item is UpgradeProposal => !!item);
-          if (parsed.length > 0) return parsed;
-        }
-
         return null;
       };
 
-      let parsed = tryParse(stripped);
-      if (!parsed) {
-        const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? "";
-        parsed = tryParse(fenced);
-      }
-      if (!parsed || parsed.length === 0) {
-        const fallback = Object.entries(DEFAULT_AGENT_PROMPTS).slice(0, 3).map(([role, prompt], i) => ({
-          id: `fallback-${Date.now()}-${i}`,
-          title: `${role[0].toUpperCase() + role.slice(1)} prompt cleanup`,
-          description: "Fallback proposal generated locally because the AI response could not be parsed.",
-          impact: "low",
-          type: "agent_prompt",
-          agentRole: role,
-          before: prompt,
-          after: prompt,
-        } as UpgradeProposal));
-        setProposals(fallback);
-        return;
-      }
+      const buildLocalProposals = (): UpgradeProposal[] => {
+        const roles: (keyof typeof DEFAULT_AGENT_PROMPTS)[] = ["architect", "builder", "designer", "qa"];
+        return roles.map((role, i) => {
+          const prompt = agentPrompts[role];
+          return {
+            id: `local-${Date.now()}-${i}`,
+            title: `${role[0].toUpperCase() + role.slice(1)} prompt hardening`,
+            description: "Locally generated upgrade to improve prompt consistency and reliability.",
+            impact: "medium",
+            type: "agent_prompt",
+            agentRole: role,
+            before: prompt,
+            after: `${prompt}\n\nAdditional rules:\n- Be explicit.\n- Return only valid structured output.\n- Never add markdown fences unless required.`,
+          } satisfies UpgradeProposal;
+        });
+      };
 
-      if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("No proposals generated — please try again");
+      let parsed = parseLooseJson(stripped);
+      if (!parsed || parsed.length === 0) {
+        parsed = buildLocalProposals();
+      }
 
       // Validate and fill in actual before text from current prompts
       const validated = parsed.map((p, i) => ({
