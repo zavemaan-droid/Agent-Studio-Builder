@@ -48,11 +48,14 @@ export default function SettingsPage() {
     u.volume = 1.0;
     if (settings.voiceName) {
       const v = getAvailableVoices().find(v => v.name === settings.voiceName);
-      if (v) u.voice = v;
+      if (v && /male|man|george|david|mark|daniel|arthur|oliver|ryan|guy|steffan/i.test(v.name)) u.voice = v;
     } else {
       // Auto-pick best voice same as Jarvis does
       const all = getAvailableVoices();
-      const best = all.find(v => v.name === "Google UK English Male")
+      const best = all.find(v => v.name === "Daniel")
+        ?? all.find(v => v.name === "Arthur")
+        ?? all.find(v => v.name === "Oliver")
+        ?? all.find(v => v.name === "Google UK English Male")
         ?? all.find(v => v.name.includes("Google UK"))
         ?? all.find(v => !v.localService && v.lang.startsWith("en"))
         ?? all.find(v => v.lang === "en-GB")
@@ -367,7 +370,7 @@ export default function SettingsPage() {
                 ))}
               </select>
               <p className="text-[10px] text-muted-foreground">
-                ✦ = neural cloud voice (sounds best) · "Google UK English Male" is closest to JARVIS
+                ✦ = neural cloud voice (sounds best) · Jarvis prefers deeper male voices like Daniel, Arthur, or Google UK English Male
               </p>
             </div>
 
