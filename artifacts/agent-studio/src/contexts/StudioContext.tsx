@@ -481,6 +481,7 @@ interface Ctx {
   deleteProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
   updateProjectFiles: (projectId: string, files: { path: string; content: string }[]) => void;
+  importProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt" | "steps" | "status"> & { files: { path: string; content: string }[] }) => string;
   pushToGithub: (projectId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
 
   // Chat
@@ -640,6 +641,21 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       p.id === projectId ? { ...p, files, updatedAt: Date.now() } : p
     );
     persistProjects(next);
+  }, [persistProjects]);
+
+  const importProject = useCallback((project: Omit<Project, "id" | "createdAt" | "updatedAt" | "steps" | "status"> & { files: { path: string; content: string }[] }) => {
+    const id = newId("proj-");
+    const next: Project = {
+      ...project,
+      id,
+      status: "ready",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      steps: [],
+      imported: true,
+    };
+    persistProjects([next, ...projectsRef.current]);
+    return id;
   }, [persistProjects]);
 
   // ── Build retry helper ──
@@ -1312,7 +1328,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     <StudioContext.Provider value={{
       ready, projects, memories, settings, modules, trainingState,
       chatHistory, activeBuildId, agentPrompts, upgradeHistory,
-      startBuild, rebuildFromStep, deleteProject, getProject, updateProjectFiles, pushToGithub,
+      startBuild, rebuildFromStep, deleteProject, getProject, updateProjectFiles, importProject, pushToGithub,
       addUserMessage, addAssistantMessage, updateLastAssistantMessage, clearChat, sendChat,
       addMemory, removeMemory,
       updateSettings,

@@ -24,6 +24,7 @@ export interface Project {
   manifest?: string;
   files?: { path: string; content: string }[];
   uploadedFrom?: string;
+  imported?: boolean;
 }
 
 export interface MemoryEntry {
