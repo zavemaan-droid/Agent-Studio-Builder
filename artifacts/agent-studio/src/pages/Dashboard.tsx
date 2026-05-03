@@ -32,7 +32,7 @@ function ProposalCard({
   proposal: UpgradeProposal;
   appliedIds: Set<string>;
   skippedIds: Set<string>;
-  onApply: (p: UpgradeProposal) => void;
+  onApply: (p: UpgradeProposal) => Promise<void> | void;
   onSkip: (id: string) => void;
 }) {
   const [showDiff, setShowDiff] = useState(false);
@@ -122,7 +122,7 @@ function ProposalCard({
             <Button
               size="sm"
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => onApply(proposal)}
+              onClick={() => void onApply(proposal)}
             >
               <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
               Apply Upgrade Permanently
