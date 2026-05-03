@@ -293,11 +293,16 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
       }
 
       // Validate and fill in actual before text from current prompts
-      const validated = parsed.map((p, i) => ({
+      const appliedKeys = new Set(
+        upgradeHistory.map(u => `${u.type}:${u.agentRole ?? ""}:${u.before}:::${u.after}`)
+      );
+      const validated = parsed
+        .map((p, i) => ({
         ...p,
         id: p.id ?? `up-${Date.now()}-${i}`,
         before: p.agentRole ? (agentPrompts[p.agentRole] ?? p.before ?? "") : p.before ?? "",
-      }));
+      }))
+      .filter(p => !appliedKeys.has(`${p.type}:${p.agentRole ?? ""}:${p.before}:::${p.after}`));
 
       setProposals(validated);
     } catch (err) {
