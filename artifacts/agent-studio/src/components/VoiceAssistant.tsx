@@ -137,10 +137,10 @@ function wantsNavigation(text: string): boolean {
 // Best-sounding voices in priority order for JARVIS-style British male.
 // On Android Chrome, localService:false = Google's neural cloud voices (much better).
 const JARVIS_VOICE_PRIORITY = [
-  "Google UK English Male",   // Best on Android Chrome — neural
   "Daniel",                   // macOS/iOS — deep British
   "Arthur",                   // macOS Ventura+ — British male
   "Oliver",                   // macOS — British male
+  "Google UK English Male",   // Best on Android Chrome — neural
   "Microsoft George",         // Windows — British
   "Microsoft Ryan",           // Windows 11 neural British
   "Microsoft George Online",
@@ -148,6 +148,8 @@ const JARVIS_VOICE_PRIORITY = [
   "Google US English",        // US neural — still far better than Samsung TTS
   "Microsoft David",
   "Microsoft Mark",
+  "Microsoft Guy",
+  "Microsoft Steffan",
   "Alex",
 ];
 
@@ -162,7 +164,7 @@ function pickVoice(savedName?: string): SpeechSynthesisVoice | null {
   // 1. User's saved preference
   if (savedName) {
     const saved = voices.find(v => v.name === savedName);
-    if (saved) return saved;
+    if (saved && /male|man|george|david|mark|daniel|arthur|oliver|ryan|guy|steffan/i.test(saved.name)) return saved;
   }
 
   // 2. Priority list — exact or partial match
