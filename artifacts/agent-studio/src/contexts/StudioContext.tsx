@@ -1208,6 +1208,24 @@ Output the COMPLETE improved files — include all three files in full:
             }, ...memoriesRef.current]);
             label = `Added template to Library: "${name}"`;
           }
+        } else if (type === "scanCode") {
+          const summary = String(data.summary ?? "");
+          const issues = Array.isArray(data.issues) ? data.issues : [];
+          if (summary || issues.length > 0) {
+            persistMemories([{
+              id: newId("mem-"),
+              type: "issue",
+              title: "Scanner Report",
+              body: `${summary}${issues.length > 0 ? `\n\nIssues:\n${issues.map((issue, index) => {
+                const item = issue as Record<string, unknown>;
+                return `${index + 1}. ${String(item.severity ?? "medium").toUpperCase()} — ${String(item.file ?? "unknown file")}\n${String(item.problem ?? "")}\nFix: ${String(item.fix ?? "")}`;
+              }).join("\n\n")}` : ""}`,
+              tags: ["scanner", "code", "issue"],
+              autoInclude: false,
+              createdAt: Date.now(),
+            }, ...memoriesRef.current]);
+            label = "Scanner report recorded for Jarvis";
+          }
         }
 
         if (type === "startBuild") {
