@@ -50,7 +50,7 @@ function AppLayout() {
       {/* Mobile bottom navigation */}
       <BottomNav />
 
-      {/* NOVA floating voice bubble — positioned above bottom nav on mobile */}
+      {/* Jarvis floating voice bubble — positioned above bottom nav on mobile */}
       <VoiceAssistant />
     </div>
   );
