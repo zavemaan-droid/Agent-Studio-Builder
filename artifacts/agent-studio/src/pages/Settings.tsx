@@ -43,8 +43,8 @@ export default function SettingsPage() {
     const u = new SpeechSynthesisUtterance(
       `Good day, ${settings.userName.split(" ")[0] || "sir"}. All systems are fully operational.`
     );
-    u.rate   = settings.voiceRate;
-    u.pitch  = settings.voicePitch;
+    u.rate   = settings.voiceRate || 1;
+    u.pitch  = Math.min(settings.voicePitch || 0.72, 0.72);
     u.volume = 1.0;
     if (settings.voiceName) {
       const v = getAvailableVoices().find(v => v.name === settings.voiceName);
@@ -52,10 +52,10 @@ export default function SettingsPage() {
     } else {
       // Auto-pick best voice same as Jarvis does
       const all = getAvailableVoices();
-      const best = all.find(v => v.name === "Daniel")
+      const best = all.find(v => v.name === "Google UK English Male")
+        ?? all.find(v => v.name === "Daniel")
         ?? all.find(v => v.name === "Arthur")
         ?? all.find(v => v.name === "Oliver")
-        ?? all.find(v => v.name === "Google UK English Male")
         ?? all.find(v => v.name.includes("Google UK"))
         ?? all.find(v => !v.localService && v.lang.startsWith("en"))
         ?? all.find(v => v.lang === "en-GB")
