@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useStudio, parseFilesFromText } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import {
-  Send, Trash2, Zap, Bot, Copy, Check, ExternalLink,
+  Send, Trash2, Bot, Copy, Check, ExternalLink,
   MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck, HammerIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -152,7 +152,7 @@ function UserAvatar({ name, color }: { name: string; color: string }) {
 }
 
 export default function AssistantPage() {
-  const { chatHistory, sendChat, clearChat, startBuild, settings } = useStudio();
+  const { chatHistory, sendChat, clearChat, settings } = useStudio();
   const firstName = settings.userName.trim().split(/\s+/)[0] || "there";
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -194,11 +194,6 @@ export default function AssistantPage() {
       e.preventDefault();
       handleSend();
     }
-  };
-
-  const handleStartBuildFromMessage = async (description: string) => {
-    const id = await startBuild(description, settings.selectedPlatform);
-    setLocation(`/studio?build=${id}`);
   };
 
   return (
@@ -293,33 +288,7 @@ export default function AssistantPage() {
                   </div>
                 )}
 
-                {/* File output card (for external app builds) */}
-                {!isUser && hasFiles && (
-                  <div className="w-full">
-                    <CodeBlock text={msg.content} />
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        size="sm"
-                        className="text-xs h-7"
-                        onClick={() => handleStartBuildFromMessage(
-                          chatHistory.findLast(m => m.role === "user")?.content ?? ""
-                        )}
-                      >
-                        <Zap className="w-3 h-3 mr-1" />
-                        Run Full Build Pipeline
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-7"
-                        onClick={() => setLocation("/projects")}
-                      >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        View Projects
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {!isUser && hasFiles && <CodeBlock text={msg.content} />}
               </div>
             </div>
           );
