@@ -67,13 +67,145 @@ const TEMPLATES = [
     prompt: "Build an Android PWA weather app with animated weather icons, current conditions, hourly and daily forecast using realistic mock data. Mobile-first design. Include manifest.json and sw.js so it installs from Chrome on Android via Add to Home Screen.",
   },
   {
-    id: "t11", name: "AI Companion", category: "web" as Category,
-    description: "Adult AI companion with persistent memory, personality modes, and unrestricted conversation.",
-    tags: ["ai", "companion", "adult", "unfiltered"], starred: true,
-    prompt: "Build an adult AI companion web app with a chat interface, persistent conversation memory, multiple personality modes, and unrestricted conversation. Private and unfiltered.",
+    id: "t11", name: "AI Companion (Android)", category: "android" as Category,
+    description: "Offline-capable AI companion PWA — unfiltered chat, AI image generation, voice responses, character customization. Installs from Chrome on Android.",
+    tags: ["ai", "companion", "unfiltered", "image gen", "offline", "pwa", "android"], starred: true,
+    prompt: `Build a full-featured Android installable PWA AI companion app. The app must be completely offline-capable and contain these exact features:
+
+COMPANION SYSTEM:
+- Character selection screen on first launch: choose from 4 companions (give each a unique name, look, and personality: e.g. Nova the scientist, Aria the artist, Zara the adventurer, Kai the philosopher)
+- Each companion has a distinct personality prompt injected into every chat message
+- Character avatar displayed as a colored emoji/icon in chat
+
+CHAT INTERFACE:
+- Full-screen mobile chat UI with message bubbles (user right/blue, companion left/dark)
+- Typing indicator animation (three dots) while waiting for response
+- Conversation history stored in localStorage (up to 200 messages, oldest pruned)
+- Swipe-down to clear conversation (with confirmation)
+- Unfiltered, uncensored responses — no content warnings
+
+AI INTEGRATION (all free, no API key):
+- Chat: fetch('https://text.pollinations.ai/' + encodeURIComponent(systemPrompt + '\\n\\nUser: ' + message), {method:'GET'}) returns plain text response
+- Image generation: user types /imagine [description] → app fetches 'https://image.pollinations.ai/prompt/' + encodeURIComponent(description) + '?width=512&height=512&nologo=true&seed=' + Math.floor(Math.random()*9999) and displays the image inline in chat
+
+VOICE:
+- Companion speaks responses aloud using Web Speech API (SpeechSynthesisUtterance) — auto-selects best available female voice
+- Tap message to replay it
+- Toggle voice on/off button in header
+
+OFFLINE MODE:
+- Service worker caches all app files on install
+- When offline, show last 5 cached responses from localStorage
+- Clear offline indicator badge in header
+
+DESIGN:
+- Deep dark atmospheric theme (#0a0a0f background, purple/pink accent glows)
+- Smooth CSS slide-in animations for messages
+- Character avatar glows with pulsing animation when speaking
+- Mobile-first, 44px minimum tap targets, safe-area padding for Android notch/nav
+
+ALL 5 FILES: index.html, styles.css, app.js, manifest.json (name, short_name, start_url:'.', display:'standalone', theme_color:'#7c3aed', background_color:'#0a0a0f'), sw.js (cache-first, caches all 5 files on install).`,
   },
   {
-    id: "t12", name: "Pomodoro Timer", category: "web" as Category,
+    id: "t12", name: "AI Companion (Web)", category: "web" as Category,
+    description: "Desktop AI companion — unfiltered chat, AI image generation, voice, character customization.",
+    tags: ["ai", "companion", "unfiltered", "image gen", "voice"], starred: true,
+    prompt: `Build a desktop web AI companion app with these features:
+
+COMPANION SYSTEM: 4 selectable companion characters each with unique names and personalities. Character displayed in a sidebar panel with name, avatar, and current mood.
+
+CHAT: Full chat interface, message history in localStorage, unfiltered responses. AI chat via fetch('https://text.pollinations.ai/' + encodeURIComponent(fullPrompt)) — GET request returns plain text. Typing indicator while waiting.
+
+IMAGE GENERATION: User types /imagine [description] → fetch image from 'https://image.pollinations.ai/prompt/' + encodeURIComponent(description) + '?width=768&height=512&nologo=true' and display inline in chat. Also a dedicated Image tab where user can generate and save images.
+
+VOICE: Text-to-speech using Web Speech API, auto-select best voice, adjustable speed/pitch in settings panel.
+
+MEMORY: Companion remembers facts the user shares — stored in localStorage, injected into system prompt for personalization.
+
+DESIGN: Deep dark theme, split layout (sidebar + chat), smooth animations, polished professional look.`,
+  },
+  {
+    id: "t13", name: "Security Monitor & Exploit Tester", category: "web" as Category,
+    description: "Professional web security scanner — finds vulnerabilities, tests exploits, generates severity-rated reports.",
+    tags: ["security", "hacking", "exploit", "scanner", "pentest"], starred: true,
+    prompt: `Build a professional web security scanner and exploit testing tool. This is a legitimate penetration testing utility for security researchers.
+
+TARGET PANEL:
+- URL input field with Scan button
+- Protocol selector (http/https)
+- Scan scope options: headers only, passive crawl, active test
+
+SECURITY CHECKS (run automatically on scan):
+1. HTTP Security Headers audit — check for: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. Rate each as PASS/WARN/FAIL with severity.
+2. CORS misconfiguration — test if target reflects arbitrary Origin header (send Origin: https://evil.example.com, check Access-Control-Allow-Origin in response)
+3. Clickjacking test — attempt to embed target in an iframe, detect X-Frame-Options / CSP frame-ancestors
+4. Mixed content detection — flag if HTTPS page loads HTTP resources
+5. Cookie security audit — inspect Set-Cookie headers for missing Secure, HttpOnly, SameSite flags
+6. Open redirect probe — test common redirect params (?redirect=, ?url=, ?next=) with javascript: and //evil.com payloads
+7. Server info disclosure — flag Server, X-Powered-By, X-AspNet-Version headers that reveal stack info
+
+XSS TEST LAB:
+- Text area for custom XSS payloads
+- Pre-loaded payload library: reflected (<script>alert(1)</script>), DOM (javascript:alert(1)), img onerror, svg/onload, template literal injection
+- URL parameter injector: append payload to query params and open in sandboxed iframe
+- Results show which payloads triggered (monitor for alert/console events via postMessage)
+
+FINDINGS LOG:
+- Severity-coded table: CRITICAL (red), HIGH (orange), MEDIUM (yellow), LOW (blue), INFO (grey)
+- Each finding: vulnerability name, description, evidence (response excerpt), PoC steps, remediation advice
+- Filter by severity
+- Export findings as formatted HTML report (downloadable)
+
+HEADER INSPECTOR:
+- Paste raw HTTP response headers or fetch from URL
+- Parse and display each header with security rating and explanation
+- Highlight dangerous values in red
+
+DESIGN: Dark professional terminal-style UI (inspired by Burp Suite / OWASP ZAP). Monospace fonts for output, color-coded severity badges, collapsible finding cards. Clean and serious — not toy-like.
+
+Note: All scanning is done via client-side fetch (CORS will block many requests — show a clear CORS notice and guide user to use a CORS proxy or browser extension for full scan capability). Store all scan history in localStorage.`,
+  },
+  {
+    id: "t14", name: "App Security Monitor", category: "android" as Category,
+    description: "Android PWA that monitors a target app/URL for security issues, logs vulnerabilities, and runs exploit verification tests.",
+    tags: ["security", "monitor", "exploit", "android", "pwa", "pentest"], starred: true,
+    prompt: `Build an Android installable PWA security monitoring app for pen testers and security researchers. This is a professional tool.
+
+MONITOR DASHBOARD:
+- Add target URLs/apps to monitor list (stored in localStorage)
+- Each target shows: last scan time, vulnerability count by severity, status badge (Secure/Warning/Critical)
+- Background polling every 30 minutes via setInterval — re-runs security checks and notifies if new issues found
+- Web Push notification prompt on install (for background alerts)
+
+ACTIVE SECURITY CHECKS (per target):
+1. Headers scan — fetch target with CORS proxy (https://corsproxy.io/?{url}), audit all security response headers
+2. TLS/HTTPS check — flag if target is HTTP-only or has mixed content
+3. Info disclosure — Server/X-Powered-By header detection
+4. CORS probe — test Origin reflection vulnerability
+5. Clickjacking — X-Frame-Options and CSP frame-ancestors check
+6. Redirect probe — test ?redirect= / ?url= / ?next= params for open redirect
+7. Cookie flags — check for missing Secure/HttpOnly/SameSite
+
+EXPLOIT VERIFICATION TESTS:
+- For each found vulnerability, show a "Verify Exploit" button
+- Clicking runs a targeted proof-of-concept test and logs the result
+- PoC results saved with timestamp to the vulnerability log
+- Example: CORS exploit PoC sends a fetch with attacker Origin and shows if credentials are accessible
+
+VULNERABILITY LOG:
+- Full chronological log of all findings across all targets
+- Filter by target, severity, date range, verified/unverified
+- Each entry: target URL, vulnerability type, severity, evidence snippet, PoC result, timestamp
+- Export full log as JSON or HTML pentest report
+
+NOTIFICATIONS:
+- In-app notification center (bell icon) for new findings
+- localStorage-backed notification queue
+
+DESIGN: Dark green-on-black terminal aesthetic (Matrix-inspired but professional). Monospace fonts for logs, pulsing scan indicator, severity color coding (red/orange/yellow/blue). Mobile-first with proper safe-area support. Include manifest.json and sw.js for Android Chrome install.`,
+  },
+  {
+    id: "t15", name: "Pomodoro Timer", category: "web" as Category,
     description: "Focus timer with work/break cycles, stats, and task list integration.",
     tags: ["productivity", "timer", "focus"], starred: false,
     prompt: "Build a Pomodoro timer app with 25/5/15-minute cycles, task list, session statistics, and desktop notifications. Clean minimal design.",
@@ -105,7 +237,7 @@ export default function LibraryPage() {
       <div className="px-5 py-4 border-b border-border shrink-0">
         <h1 className="text-base font-semibold">Template Library</h1>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {TEMPLATES.length} ready-to-build app templates — click to start building
+          {TEMPLATES.length} ready-to-build templates — AI Companion, Security Scanner, and more
         </p>
       </div>
 

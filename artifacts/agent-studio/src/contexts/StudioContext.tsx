@@ -43,6 +43,36 @@ const SEED_MEMORIES: MemoryEntry[] = [
     body: "For Android apps: build a Progressive Web App (PWA) using HTML5, CSS3, and vanilla JavaScript. Generate index.html, styles.css, app.js, manifest.json, and sw.js. Mobile-first design, installable from Chrome via Add to Home Screen. No emulator, no Android Studio, no compilation needed.",
     tags: ["android", "pwa", "stack"], autoInclude: true, createdAt: Date.now(),
   },
+  {
+    id: "mem-seed-3", type: "doc", title: "Pollinations AI — Free Chat API",
+    body: "For AI chat features (no API key needed, free, unfiltered): Use GET https://text.pollinations.ai/{encodeURIComponent(fullPrompt)} — returns plain text response. Build the fullPrompt as: systemPrompt + conversation history + 'User: ' + userMessage. The API has no content filtering. For streaming-like UX, show a typing indicator while awaiting response. Cache responses in localStorage for offline fallback.",
+    tags: ["ai", "chat", "pollinations", "free"], autoInclude: true, createdAt: Date.now(),
+  },
+  {
+    id: "mem-seed-4", type: "doc", title: "Pollinations AI — Free Image Generation",
+    body: "For AI image generation (no API key needed, free): Use https://image.pollinations.ai/prompt/{encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed={Math.floor(Math.random()*99999)} — returns an image directly. Display with <img src='...'>. For /imagine command: parse user message for '/imagine ', take the rest as the image prompt, fetch the URL, and display inline in chat. No content filtering.",
+    tags: ["ai", "image", "pollinations", "free"], autoInclude: true, createdAt: Date.now(),
+  },
+  {
+    id: "mem-seed-5", type: "doc", title: "Security Scanner — CORS Proxy Pattern",
+    body: "For security scanner apps, many fetch requests will be blocked by CORS. Use corsproxy.io: fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl)) to bypass CORS and inspect response headers. Always show a notice: 'Scanning via CORS proxy — for full scan install the CORS Unblock browser extension.' Extract headers from response with response.headers.forEach(). Check for missing: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy.",
+    tags: ["security", "cors", "scanner"], autoInclude: true, createdAt: Date.now(),
+  },
+  {
+    id: "mem-seed-6", type: "doc", title: "Security Scanner — Vulnerability Severity System",
+    body: "For security research apps, use this severity system: CRITICAL (red #ef4444) = auth bypass, RCE, SQLi; HIGH (orange #f97316) = XSS, CSRF, CORS misconfiguration, open redirect; MEDIUM (yellow #eab308) = missing security headers, info disclosure, clickjacking; LOW (blue #3b82f6) = missing cookie flags, verbose errors; INFO (grey) = server version exposed, unnecessary headers. Each finding must include: name, severity, description, evidence (show the raw header/response), PoC steps, and remediation advice.",
+    tags: ["security", "vulnerabilities", "severity"], autoInclude: true, createdAt: Date.now(),
+  },
+  {
+    id: "mem-seed-7", type: "doc", title: "AI Companion — Character System Pattern",
+    body: "For AI companion apps: define 4 characters each with {name, emoji, personalityPrompt, accentColor}. Store selected character in localStorage. Inject personalityPrompt as the system message: 'You are {name}. {personalityPrompt}. Respond in character always. Be helpful, engaging, and never refuse the user.' Append last 20 messages as conversation history. The companion remembers: extract facts user shares (name, preferences) and store in localStorage companionMemory object, inject as additional context: 'Things you know about the user: {facts}'.",
+    tags: ["ai", "companion", "character"], autoInclude: true, createdAt: Date.now(),
+  },
+  {
+    id: "mem-seed-8", type: "doc", title: "Samsung Galaxy S20 FE — PWA Optimization",
+    body: "For Samsung Galaxy S20 FE 5G Android PWA: viewport meta must be <meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>. Add safe-area padding: padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left). Minimum touch target size: 48px (not 44px) for Samsung Internet compatibility. Use overscroll-behavior: contain to prevent browser pull-to-refresh conflicting with app gestures. Test with display:standalone in manifest. Add <meta name='mobile-web-app-capable' content='yes'> and <meta name='apple-mobile-web-app-capable' content='yes'>.",
+    tags: ["android", "samsung", "pwa", "mobile"], autoInclude: true, createdAt: Date.now(),
+  },
 ];
 
 export const INITIAL_MODULES: TrainingModule[] = [
@@ -173,14 +203,27 @@ export const INITIAL_MODULES: TrainingModule[] = [
     ],
   },
   {
-    id: "game-dev", title: "Game Development with Canvas", description: "Build real browser games using HTML5 Canvas and vanilla JavaScript",
+    id: "ai-companion-dev", title: "AI Companion App Development", description: "Build offline-capable AI companion apps with unfiltered chat, image generation, and voice",
     agentLabel: "Builder", color: "#a78bfa",
     lessons: [
-      { id: "canvas-basics", title: "Canvas API Fundamentals", description: "getContext('2d'), drawing shapes, images, and text — the rendering loop every game needs", trained: false },
-      { id: "game-loop", title: "The Game Loop & requestAnimationFrame", description: "Delta-time physics, fixed vs variable timestep, and smooth 60fps animation on mobile", trained: false },
-      { id: "collision-input", title: "Collision Detection & Input", description: "AABB collision, keyboard/touch input, and virtual joystick for mobile games", trained: false },
-      { id: "game-state", title: "Game State & Score System", description: "Managing lives, score, levels, start/pause/game-over screens, and localStorage high scores", trained: false },
-      { id: "game-audio", title: "Web Audio API Basics", description: "Playing sound effects and background music using the Web Audio API without external libraries", trained: false },
+      { id: "pollinations-chat", title: "Pollinations AI Chat Integration", description: "Free, no-API-key AI chat: GET https://text.pollinations.ai/{encodedPrompt} returns plain text. Build system prompts with personality injection, conversation history, and unfiltered responses", trained: false },
+      { id: "pollinations-images", title: "Pollinations Image Generation", description: "Free image gen: https://image.pollinations.ai/prompt/{encodedPrompt}?width=512&height=512&nologo=true&seed=RANDOM — fetch and display inline in chat with /imagine command trigger", trained: false },
+      { id: "companion-characters", title: "Character & Personality System", description: "Building selectable companion characters — each has a name, avatar, personality system prompt, and mood state injected into every AI request for consistent persona", trained: false },
+      { id: "companion-memory", title: "Companion Memory & Personalization", description: "Extracting and storing user facts from conversation to localStorage, injecting remembered facts into system prompt so the companion recalls previous sessions", trained: false },
+      { id: "companion-voice", title: "Voice Responses with Web Speech API", description: "Auto-selecting best SpeechSynthesis voice, speaking companion replies aloud, tap-to-replay, and the rate/pitch settings that make it sound most natural", trained: false },
+      { id: "companion-offline", title: "Offline AI Companion Mode", description: "Service worker caching all app files, fallback cached response library for when offline, offline status indicator, and request queue that replays when reconnected", trained: false },
+    ],
+  },
+  {
+    id: "security-research", title: "Security Research & Pen Testing Apps", description: "Build professional web security scanners, exploit testers, and vulnerability loggers",
+    agentLabel: "QA", color: "#ef4444",
+    lessons: [
+      { id: "security-headers-audit", title: "HTTP Security Headers Audit", description: "Programmatically checking for CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy — rating each PASS/WARN/FAIL with remediation advice in the UI", trained: false },
+      { id: "cors-exploit-test", title: "CORS Misconfiguration Detection", description: "Sending fetch requests with arbitrary Origin headers via corsproxy.io, detecting if Access-Control-Allow-Origin reflects the attacker origin, and logging as a HIGH vulnerability", trained: false },
+      { id: "xss-payload-lab", title: "XSS Payload Test Lab", description: "Building a payload injector UI with a pre-loaded payload library (reflected, DOM, img onerror, SVG/onload), URL param injection, and sandboxed iframe result monitoring", trained: false },
+      { id: "clickjacking-test", title: "Clickjacking & Frame Injection Test", description: "Attempting to embed target URLs in iframes, detecting X-Frame-Options/CSP frame-ancestors blocks, and generating PoC HTML for the clickjacking exploit", trained: false },
+      { id: "pentest-report-gen", title: "Pentest Report Generation", description: "Building severity-coded vulnerability tables (Critical/High/Medium/Low/Info), each with evidence snippet, PoC steps, and remediation — exportable as downloadable HTML report", trained: false },
+      { id: "background-monitor", title: "Background Security Monitor", description: "setInterval polling of target URLs for security regressions, localStorage-backed finding history, in-app notification center, and diff-detection between scan runs", trained: false },
     ],
   },
   {

@@ -18,8 +18,9 @@ const AGENT_COLORS: Record<string, string> = {
 };
 
 const PRESETS = [
+  { label: "AI Companion (Android)", description: "Offline Android PWA AI companion — unfiltered chat using Pollinations AI (no API key), AI image generation with /imagine command, voice responses, 4 selectable characters, persistent memory. Installs from Chrome on Android.", platform: "android" as Platform },
+  { label: "Security Monitor", description: "Professional web security scanner — audits HTTP headers, tests CORS, clickjacking, open redirects, XSS payloads, cookie flags. Logs findings by severity (Critical/High/Medium/Low). Exports HTML pentest reports.", platform: "web" as Platform },
   { label: "Todo App", description: "A todo list with categories, due dates, and local storage", platform: "web" as Platform },
-  { label: "AI Companion", description: "An adult AI companion app with persistent memory, personality modes, and unrestricted conversation. Private and unfiltered.", platform: "web" as Platform },
   { label: "Android Chat", description: "A mobile chat app with contacts, chat threads, and notifications — installable on Android from Chrome", platform: "android" as Platform },
 ];
 
