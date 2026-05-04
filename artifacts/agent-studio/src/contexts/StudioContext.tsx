@@ -325,7 +325,7 @@ You can instantly apply any of these changes by including action blocks in your 
 
 ### Action: Record a Code Scan
 \`\`\`fix
-{"type":"scanCode","label":"Scanner report","data":{"summary":"...","issues":[{"severity":"high","file":"...","problem":"...","fix":"..."}]} }
+{"type":"scanCode","summary":"Brief summary of findings","issues":[{"severity":"high","file":"filename.js","problem":"What is wrong","fix":"How to fix it"}]}
 \`\`\`
 
 **CRITICAL RULES FOR ACTIONS:**
@@ -556,30 +556,62 @@ The app opens in Chrome on Android and installs via "Add to Home Screen" — zer
 }
 
 // ──────────────────────────────────────────────
+// JSON repair helpers
+// ──────────────────────────────────────────────
+
+/** Fix literal newlines/tabs inside JSON string values so JSON.parse succeeds */
+function fixJSONStringLiterals(s: string): string {
+  let inStr = false, escaped = false, result = "";
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]!;
+    if (escaped) { result += ch; escaped = false; continue; }
+    if (ch === "\\") { escaped = true; result += ch; continue; }
+    if (ch === '"') { inStr = !inStr; result += ch; continue; }
+    if (inStr) {
+      if (ch === "\n") { result += "\\n"; continue; }
+      if (ch === "\r") { result += "\\r"; continue; }
+      if (ch === "\t") { result += "\\t"; continue; }
+    }
+    result += ch;
+  }
+  return result;
+}
+
+/** Try JSON.parse, then try with newline/tab repair, then give up */
+function robustJSONParse<T>(raw: string): T | null {
+  try { return JSON.parse(raw) as T; } catch { /* try repair */ }
+  try { return JSON.parse(fixJSONStringLiterals(raw)) as T; } catch { return null; }
+}
+
+// ──────────────────────────────────────────────
 // File parser
 // ──────────────────────────────────────────────
 
 export function parseFilesFromText(text: string): { path: string; content: string }[] {
-  // Strategy 1: ```files {"files":[...]} ``` — the canonical format
-  try {
-    const match = text.match(/```files\s*([\s\S]*?)```/);
-    if (match?.[1]) {
-      const parsed = JSON.parse(match[1].trim()) as { files?: { path: string; content: string }[] };
-      if (parsed.files && parsed.files.length > 0) return parsed.files;
-    }
-  } catch { /* fall through */ }
+  type FilesPayload = { files?: { path: string; content: string }[] };
+  type FilesArray = { path: string; content: string }[];
+
+  // Strategy 1: ```files {"files":[...]} ```
+  // Use \n``` as terminator so backticks inside the JSON content don't break extraction
+  const filesMatch = text.match(/```files\s*([\s\S]*?)\n```/) ?? text.match(/```files\s*([\s\S]*?)```/);
+  if (filesMatch?.[1]) {
+    const parsed = robustJSONParse<FilesPayload>(filesMatch[1].trim());
+    if (parsed?.files && parsed.files.length > 0) return parsed.files;
+  }
 
   // Strategy 2: ```json [...] or {...files:[]} ``` — AI sometimes wraps in json fence
-  try {
-    const fences = [...text.matchAll(/```(?:json|javascript|js)?\s*([\s\S]*?)```/g)];
-    for (const fence of fences) {
-      const raw = fence[1]?.trim();
-      if (!raw) continue;
-      const parsed = JSON.parse(raw) as { files?: { path: string; content: string }[] } | { path: string; content: string }[];
+  // Try/catch is INSIDE the loop so one bad fence does not block subsequent valid ones
+  const fences = [...text.matchAll(/```(?:json|javascript|js)?\s*([\s\S]*?)\n```/g)];
+  for (const fence of fences) {
+    const raw = fence[1]?.trim();
+    if (!raw) continue;
+    try {
+      const parsed = robustJSONParse<FilesPayload | FilesArray>(raw);
+      if (!parsed) continue;
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.path && parsed[0]?.content) return parsed;
-      if (!Array.isArray(parsed) && parsed.files && parsed.files.length > 0) return parsed.files;
-    }
-  } catch { /* fall through */ }
+      if (!Array.isArray(parsed) && (parsed as FilesPayload).files && (parsed as FilesPayload).files!.length > 0) return (parsed as FilesPayload).files!;
+    } catch { /* skip this fence */ }
+  }
 
   // Strategy 3: individual named file blocks  ```filename.ext\n...code\n```
   const fileBlockRegex = /```([\w./\-]+\.(?:html|css|js|ts|jsx|tsx|py|kt|xml|json|md))\s*\n([\s\S]*?)```/g;
@@ -1065,10 +1097,9 @@ Output the COMPLETE improved files — include all three files in full:
           { groqKey: settingsRef.current.groqKey }
         );
 
-        // For file-producing agents: verify output has substance
-        if ((step.role === "packager" || step.role === "builder") &&
-            parseFilesFromText(output).length === 0 &&
-            attempt < MAX_ATTEMPTS) {
+        // For file-producing agents: verify files were returned
+        const isFileAgent = ["builder", "designer", "qa", "packager"].includes(step.role);
+        if (isFileAgent && parseFilesFromText(output).length === 0 && attempt < MAX_ATTEMPTS) {
           throw new Error(`No files extracted from ${step.role} output`);
         }
 
@@ -1133,7 +1164,8 @@ Output the COMPLETE improved files — include all three files in full:
             step, i, description, platform, previousOutputs, working, updateProject
           );
           working = finalWorking;
-          previousOutputs = output;
+          // Truncate previousOutputs to ~8000 chars to avoid bloating later prompts
+          previousOutputs = output.length > 8000 ? output.slice(0, 8000) + "\n...[truncated for context]" : output;
 
           working = {
             ...working,
@@ -1232,7 +1264,8 @@ Output the COMPLETE improved files — include all three files in full:
   // ── Parse and execute ```fix {...} ``` action blocks from AI responses ──
   const executeActions = useCallback((response: string): AssistantAction[] => {
     const applied: AssistantAction[] = [];
-    const fixRegex = /```fix\s*([\s\S]*?)```/g;
+    // Use \n``` as terminator so any backtick inside the JSON body doesn't close early
+    const fixRegex = /```fix\s*([\s\S]*?)\n```/g;
     let match;
     while ((match = fixRegex.exec(response)) !== null) {
       try {
@@ -1389,7 +1422,7 @@ Output the COMPLETE improved files — include all three files in full:
       persistChat([...chatRef.current.slice(0, -1), finalMsg]);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "AI call failed";
-      persistChat([...chatRef.current.slice(0, -1), { ...placeholder, content: `Sorry, I ran into an error: ${errMsg}` }]);
+      persistChat([...chatRef.current.slice(0, -1), { ...placeholder, content: `I encountered an error, sir: ${errMsg}. All systems are standing by — please try again.` }]);
     }
   }, [addUserMessage, persistChat, executeActions]);
 
