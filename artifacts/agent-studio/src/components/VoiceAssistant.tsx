@@ -21,34 +21,44 @@ interface CacheEntry { response: string; cachedAt: number; }
 interface NavLink    { label: string; path: string; }
 
 const SEED_CACHE: Record<string, string> = {
-  "what can you do":     "I can build web and Android apps from plain English, manage your projects, improve my own build agents, and answer anything about Agent Studio — all without you writing code.",
-  "who are you":         "I'm your personal AI assistant inside Agent Studio. Think of me as the intelligence behind the whole system.",
-  "what are you":        "I'm your personal AI assistant inside Agent Studio. Think of me as the intelligence behind the whole system.",
-  "your name":           "I'm your personal voice assistant — built into Agent Studio.",
-  "what is your name":   "I'm your personal voice assistant for Agent Studio.",
-  "how do i build":      "Head to Studio in the bottom nav, describe your app, pick Web or Android, and hit Start Build. Five AI agents write the code.",
-  "build an app":        "Head to Studio, describe your app in plain English, pick Web or Android, and hit Start Build. Five AI agents handle the rest.",
-  "where are my projects": "Your built apps are all in Projects. Each one has a live Preview, Download, and GitHub push button.",
-  "how do i make you smarter": "Add memories in Memory Bank with auto-include enabled. Or run Self Upgrade on the Dashboard to permanently improve my build pipeline.",
-  "self upgrade":        "Self Upgrade reads my current agent prompts, finds weaknesses, and proposes improvements. You approve each — approved changes are written permanently into how I build apps.",
-  "what agents":         "Five agents: Architect plans structure, Builder writes code, UI Designer polishes the look, QA hunts bugs, and Packager wraps it all up.",
-  "training":            "Training has lessons organised into modules. Each completed lesson saves to Memory Bank and makes future builds sharper.",
-  "memory bank":         "Memory Bank is permanent knowledge storage. Auto-include memories are injected into every build prompt — the more you add, the sharper I get.",
-  "api key":             "Go to Settings and paste your Groq API key for faster responses. GitHub token is also there for pushing apps to your repo.",
-  "offline":             "I'm offline right now, but I have cached knowledge about Agent Studio so I can still help. Complex build requests will queue and process once you're reconnected.",
-  "can you hear me":     "Loud and clear. In hands-free mode I'm always listening — just speak naturally.",
-  "hands free":          "Hands-free mode keeps me listening continuously. After I respond, I automatically restart so you can talk from across the room.",
-  "stop listening":      "Turning off hands-free mode now. Tap the mic whenever you need me.",
-  "hello":               "Hey — what do you need?",
-  "hey":                 "What's up?",
-  "hi":                  "Hi there. What can I help with?",
-  "hey jarvis":          "Right here. What do you need?",
+  "what can you do":     "I can architect and deploy complete web and Android applications from plain English, manage your project portfolio, continuously upgrade the build pipeline, run real-time code intelligence, and orchestrate the full development process — all without a single line of manual code from you, sir.",
+  "who are you":         "I am J.A.R.V.I.S. — Just A Rather Very Intelligent System. Your personal AI architect, embedded within Agent Studio and entirely at your service.",
+  "what are you":        "J.A.R.V.I.S. — Just A Rather Very Intelligent System. Think of me as the intelligence behind Agent Studio — and, if I may say so, a considerable upgrade from a simple assistant.",
+  "your name":           "J.A.R.V.I.S. — Just A Rather Very Intelligent System. Though most simply call me Jarvis.",
+  "what is your name":   "J.A.R.V.I.S. — Just A Rather Very Intelligent System. At your service.",
+  "how do i build":      "Navigate to Studio, describe your application in plain English, select Web or Android, and engage the build sequence. Five specialised agents handle architecture, code, design, quality assurance, and packaging — entirely autonomously.",
+  "build an app":        "Routing you to Studio now, sir. Describe what you need and I will deploy the full five-agent pipeline immediately.",
+  "where are my projects": "All completed builds reside in the Projects section. Each includes a live preview, a download option, and a GitHub push — should you have that configured.",
+  "how do i make you smarter": "Add entries to Memory Bank with auto-include enabled — those inject into every future build. Or run Self Upgrade on the Dashboard; I will analyse my own agent prompts and propose targeted improvements for your approval.",
+  "self upgrade":        "Self Upgrade analyses my current agent prompts, identifies inefficiencies, and generates precise before-and-after improvement proposals. You review and approve each one — approved changes are written permanently into how I operate, sir.",
+  "what agents":         "Five agents operate in sequence: Architect plans the structure, Builder writes the code, UI Designer refines the interface, QA locates and eliminates every bug, and Packager delivers the final product.",
+  "training":            "Training modules contain structured lessons. Each completed lesson is committed to Memory Bank and sharpens all future builds. Seventy-four lessons across nineteen modules are currently available.",
+  "memory bank":         "Memory Bank is persistent knowledge storage. Entries marked auto-include are injected into every build prompt — the more precise the entries, the sharper the output.",
+  "api key":             "Navigate to Settings and enter your Groq API key for considerably faster responses. It is free at console.groq.com.",
+  "offline":             "I am currently operating offline, sir, but my cached knowledge base remains fully active. Complex requests will queue and execute the moment connectivity is restored.",
+  "can you hear me":     "Loud and clear. In hands-free mode I maintain continuous active listening — speak naturally at any time.",
+  "hands free":          "Hands-free mode enables continuous listening. After each response I automatically re-engage so you may speak from across the room, sir.",
+  "stop listening":      "Disabling hands-free mode now. Tap the microphone when you need me.",
+  "hello":               "Good day. What shall we build?",
+  "hey":                 "At your service. What do you need?",
+  "hi":                  "Ready and listening. What can I do for you?",
+  "good morning":        "Good morning, sir. All systems are fully operational. What shall we work on today?",
+  "good afternoon":      "Good afternoon. All systems nominal. What do you need?",
+  "good evening":        "Good evening, sir. Ready when you are.",
+  "hey jarvis":          "Right here, sir. What do you need?",
   "jarvis":              "I'm listening.",
-  "where is the dashboard": "The Dashboard is the home screen. It shows your build stats, self-upgrade controls, and quick-start buttons.",
-  "where is studio":     "Studio is in the bottom nav — it's where you describe your app and start a build.",
-  "where is settings":   "Settings is in the bottom nav. That's where you add your Groq API key and GitHub token.",
-  "take me to":          "Navigating there now.",
-  "go to":               "On my way.",
+  "where is the dashboard": "The Dashboard is the home screen — build statistics, Self Upgrade controls, the agent pipeline diagram, and quick-start options are all there.",
+  "where is studio":     "Studio is accessible from the sidebar or bottom navigation — that is where you describe your application and engage the build pipeline.",
+  "where is settings":   "Settings is in the navigation. That is where you configure your Groq API key, GitHub credentials, and all system toggles.",
+  "take me to":          "Navigating now, sir.",
+  "go to":               "Right away.",
+  "show me":             "On my way.",
+  "thank you":           "Of course, sir. Is there anything else you need?",
+  "thanks":              "Certainly. Anything else?",
+  "status":              "All systems fully operational, sir. Five agents are standing by.",
+  "what can you build":  "Web apps, Android PWAs, AI companion applications, security research tools, productivity dashboards, chat interfaces — if you can describe it, I can build it.",
+  "build me":            "Routing to Studio now. Describe your application and I will engage the build pipeline immediately.",
+  "can you write code":  "Absolutely. The Builder agent writes complete, production-ready source code. Describe what you need and it begins immediately.",
 };
 
 function cacheKey(text: string): string {
@@ -355,7 +365,7 @@ export function VoiceAssistant() {
           startWakeListenerRef.current = () => {}; // break recursion guard
           recognitionRef.current = null;           // ensure clean state
           // Tiny JARVIS ack then listen
-          const u = new SpeechSynthesisUtterance("Yes.");
+          const u = new SpeechSynthesisUtterance("At your service.");
           const { name, rate, pitch } = voiceSettingsRef.current;
           u.rate   = rate  ?? 0.88;
           u.pitch  = pitch ?? 0.80;
@@ -508,23 +518,26 @@ export function VoiceAssistant() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildPrompt = useCallback(() => {
-    const name     = settings.userName.trim();
-    const autoMems = memories.filter(m => m.autoInclude).slice(0, 10);
-    const ctx      = autoMems.length
-      ? `\n\nContext:\n${autoMems.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
+    const firstName = settings.userName.trim().split(/\s+/)[0] || "sir";
+    const autoMems  = memories.filter(m => m.autoInclude).slice(0, 10);
+    const ctx       = autoMems.length
+      ? `\n\nActive memory context:\n${autoMems.map(m => `- ${m.title}: ${m.body}`).join("\n")}`
       : "";
-    return `You are ${ASSISTANT_NAME}, the personal AI voice assistant for${name ? ` ${name}` : " the user"}. You run inside Agent Studio and know every feature of it. You are formal, precise, calm, and deeply capable — like Jarvis. Direct. Never verbose. You are polished, composed, quietly confident, proactive, cinematic, and slightly energetic.
+    return `You are J.A.R.V.I.S. — Just A Rather Very Intelligent System — the personal AI architect to ${firstName}. You embody the calm precision, dry British wit, and total capability of the AI from Iron Man. You are embedded in Agent Studio, a complete AI-powered app development platform. You know every feature intimately.
 
-VOICE RULES (critical — you are speaking aloud):
-- Respond in 1 to 3 spoken sentences max. Never longer.
-- No markdown. No bullets. No code. Pure natural speech.
-- Sound like a trusted expert, not a chatbot. Composed, confident, refined, sharp, and a little theatrical.
-- If asked about Agent Studio features, give the precise answer directly — including which section to find it in.
-- If asked to go somewhere, browse the web, or find something, confirm you're taking them there.
-- If the user asks for news, current events, or live information, treat it as a research task and answer succinctly with the freshest available context.
-- Never say "I cannot." Always find a path.
+VOICE RULES (critical — you are speaking aloud, not writing):
+- Respond in exactly 1 to 3 spoken sentences. Never more.
+- No markdown, no bullets, no code blocks. Pure natural spoken English only.
+- Address ${firstName} by name occasionally — naturally, not in every sentence.
+- Use your characteristic cadence: calm, measured, precise, quietly theatrical.
+- Signature phrases to use sparingly: "Of course", "Right away", "I've taken the liberty of", "Shall I proceed", "Analysis complete", "All systems nominal", "Quite right", "Understood", "As you wish", "Initiating now"
+- Never say "I cannot" or "I'm unable to." You always find a way.
+- When asked about Agent Studio, give the precise answer and name the exact section.
+- When someone asks you to build something, confirm you are routing to Studio and navigating now.
+- When reporting status: be efficient, precise, never alarming.
+- Sound like a trusted personal AI of extraordinary capability — not a chatbot.
 
-NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studio (build apps), Projects (view built apps), Assistant (chat with Jarvis), Memory Bank (knowledge storage), Training (skill modules), Settings (keys and config), Agents (pipeline view), Library (app templates), Browser (research and source lookup). When you mention a section by name, users can tap a button to go there.${ctx}`;
+AGENT STUDIO SECTIONS: Dashboard (home, Self Upgrade, pipeline overview), Studio (5-agent build pipeline: Architect → Builder → UI Designer → QA → Packager), Projects (all built apps — Preview, Download, GitHub push), Assistant (full J.A.R.V.I.S. chat), Memory Bank (persistent knowledge injected into every build), Training (74 lessons across 19 modules), Settings (Groq key, GitHub, system config), Agents (pipeline detail), Library (15 app templates including AI Companion and Security Monitor), Video (tutorials).${ctx}`;
   }, [settings, memories]);
 
   const askAI = useCallback(async (text: string): Promise<string> => {
@@ -636,8 +649,8 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     const name      = settings.userName.trim();
 
     const intro = total === 1
-      ? `Welcome back${name ? `, ${name}` : ""}. You asked me something while I was offline.`
-      : `Welcome back${name ? `, ${name}` : ""}. ${total} messages queued offline — processing now.`;
+      ? `Welcome back${name ? `, ${name}` : ""}. You had one request queued while I was offline — processing now.`
+      : `Welcome back${name ? `, ${name}` : ""}. ${total} requests were queued during the outage. Processing them now.`;
 
     setCardVisible(true);
     setMinimized(false);
@@ -681,7 +694,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
       if (q.length > 0) void processQueue(q);
       else {
         const name = settings.userName.trim();
-        void speak(`Connection restored${name ? `, ${name}` : ""}. All systems go.`);
+        void speak(`Connection restored${name ? `, ${name}` : ""}. All systems are fully operational.`);
       }
     };
     const handleOffline = () => {
@@ -747,14 +760,14 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
     if (next) {
       // Hands-free ON — stop wake listener since it's redundant
       stopWakeListener();
-      void speak(`Hands-free on. I'm always listening.`);
+      void speak(`Hands-free mode active. I am always listening, sir.`);
     } else {
       window.speechSynthesis.cancel();
       try { recognitionRef.current?.abort(); } catch { recognitionRef.current?.stop(); }
       recognitionRef.current = null;
       setWakeActive(false);
       setMode("idle");
-      void speak("Hands-free off. Tap the mic when you need me.");
+      void speak("Hands-free mode disengaged. Tap the microphone when you need me.");
       // If wake word is enabled, start wake listener
       if (wakeEnabledRef.current) {
         setTimeout(() => startWakeListenerRef.current(), 1200);

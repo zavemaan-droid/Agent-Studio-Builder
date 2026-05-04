@@ -10,18 +10,18 @@ import { useLocation } from "wouter";
 import type { AssistantAction } from "@/lib/types";
 
 const SUGGESTIONS = [
-  "Build me a todo list app",
-  "Make me a fun game I can play in my browser",
-  "Create a notes app for my phone",
-  "Build me a simple weather app",
-  "I want a habit tracker app",
+  "Build me an AI companion Android app with image generation",
+  "Create a security scanner that finds vulnerabilities in websites",
+  "Build me a todo app for Android I can install from Chrome",
+  "Make me an offline AI chat app — no API key needed",
+  "Create a security monitor that logs exploits and tests them",
+  "Build me a budget tracker with charts",
   "What kinds of apps can you build for me?",
-  "Make me a recipe app with favorites",
-  "Build a budget tracker for me",
-  "Create a workout planner app",
-  "Make me a birthday reminder app",
-  "Build a simple chat app",
-  "Create a photo gallery app",
+  "Build me a notes app with search and tags",
+  "Create an Android PWA fitness tracker",
+  "Make me a password manager with local encryption",
+  "Build a habit tracker with streak counters",
+  "Create a web scraper and data extractor tool",
 ];
 
 const ACTION_ICONS: Record<AssistantAction["type"], React.ReactNode> = {
@@ -205,12 +205,12 @@ export default function AssistantPage() {
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-[10px] font-bold text-white tracking-widest">N</span>
+            <span className="text-[10px] font-bold text-white tracking-widest">J</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold">Jarvis</h1>
+            <h1 className="text-sm font-semibold">J.A.R.V.I.S.</h1>
             <p className="text-[11px] text-muted-foreground">
-              Self-aware assistant · Fixes Agent Studio instantly{settings.groqKey ? " · Groq active" : " · Free via Pollinations"}
+              Just A Rather Very Intelligent System · Builds · Codes · Deploys{settings.groqKey ? " · Groq active" : " · Free via Pollinations"}
             </p>
           </div>
         </div>
@@ -231,9 +231,9 @@ export default function AssistantPage() {
               <Bot className="w-8 h-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-semibold">Hey {firstName}! What would you like to build?</h2>
+              <h2 className="text-lg font-semibold">Good day, {firstName}. What shall I build?</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Just tell me in plain English — "build me a todo app", "make me a game", anything you want. I'll handle all the technical stuff and build it for you.
+                Describe what you want in plain English — AI companion, security scanner, Android app, anything. I will architect, code, design, test, and deliver it entirely.
               </p>
             </div>
             <div className="grid gap-2 w-full max-w-md">
@@ -262,7 +262,7 @@ export default function AssistantPage() {
               {isUser
                 ? <UserAvatar name={settings.userName} color={settings.userColor} />
                 : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[9px] font-bold text-white tracking-widest">N</span>
+                    <span className="text-[9px] font-bold text-white tracking-widest">J</span>
                   </div>
               }
 
@@ -320,7 +320,7 @@ export default function AssistantPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={'Tell me what to build, e.g. "make me a todo app"...'}
+            placeholder={'Describe your app — e.g. "build me an AI companion for Android with image generation"...'}
             rows={1}
             className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-32 leading-relaxed py-0.5"
             style={{ scrollbarWidth: "none" }}
