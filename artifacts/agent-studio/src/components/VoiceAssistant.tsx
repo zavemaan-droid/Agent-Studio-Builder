@@ -6,7 +6,8 @@ import { loadData, saveData } from "@/lib/storage";
 import {
   registerJarvisSpeak, registerJarvisToggle,
   registerJarvisListen, registerJarvisStopAll,
-  dispatchJarvisState,
+  registerJarvisBuildVoice, dispatchJarvisState,
+  jarvisBuildVoice,
 } from "@/lib/jarvisVoice";
 
 type VoiceMode = "idle" | "listening" | "thinking" | "speaking";
@@ -500,6 +501,23 @@ AGENT STUDIO SECTIONS: Dashboard (home, Self Upgrade, pipeline overview), Studio
       setMode("speaking");
       await speak(farewell);
       setMode("idle");
+      return;
+    }
+
+    // Voice build shortcut — "build me [description]" triggers full pipeline hands-free
+    const BUILD_RE = /^\s*(?:build|make|create)\s+(?:me\s+)?(?:an?\s+)?(.+?)(?:\s+(?:for|on)\s+(android|web))?\s*[.!?]*\s*$/i;
+    const bm = text.match(BUILD_RE);
+    const buildDesc = bm?.[1]?.trim();
+    if (buildDesc && buildDesc.length > 5) {
+      const buildPlatform = bm?.[2]?.toLowerCase() === "android" ? "android" : "web";
+      addUserMessage(text);
+      const ack = `Initiating build for "${buildDesc}", sir. Routing to Studio now.`;
+      setReply(ack);
+      addAssistantMessage(ack);
+      setTimeout(() => setLocationRef.current("/studio"), 700);
+      await speak(ack);
+      void jarvisBuildVoice(buildDesc, buildPlatform);
+      if (handsFreeRef.current) setTimeout(startListening, 1200);
       return;
     }
 

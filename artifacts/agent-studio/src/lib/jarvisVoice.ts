@@ -8,25 +8,31 @@ export interface JarvisStateEvent {
 
 type SpeakFn  = (text: string) => Promise<void>;
 type VoidFn   = () => void;
+type BuildFn  = (description: string, platform: string) => Promise<string>;
 
 const _r: {
-  speak?:   SpeakFn;
-  toggle?:  VoidFn;
-  listen?:  VoidFn;
-  stopAll?: VoidFn;
+  speak?:      SpeakFn;
+  toggle?:     VoidFn;
+  listen?:     VoidFn;
+  stopAll?:    VoidFn;
+  buildVoice?: BuildFn;
 } = {};
 
-export function registerJarvisSpeak(fn: SpeakFn)  { _r.speak   = fn; }
-export function registerJarvisToggle(fn: VoidFn)  { _r.toggle  = fn; }
-export function registerJarvisListen(fn: VoidFn)  { _r.listen  = fn; }
-export function registerJarvisStopAll(fn: VoidFn) { _r.stopAll = fn; }
+export function registerJarvisSpeak(fn: SpeakFn)        { _r.speak      = fn; }
+export function registerJarvisToggle(fn: VoidFn)        { _r.toggle     = fn; }
+export function registerJarvisListen(fn: VoidFn)        { _r.listen     = fn; }
+export function registerJarvisStopAll(fn: VoidFn)       { _r.stopAll    = fn; }
+export function registerJarvisBuildVoice(fn: BuildFn)   { _r.buildVoice = fn; }
 
 export function jarvisSpeak(text: string): Promise<void> {
   return _r.speak?.(text) ?? Promise.resolve();
 }
-export function jarvisToggle()  { _r.toggle?.();  }
-export function jarvisListen()  { _r.listen?.();  }
-export function jarvisStopAll() { _r.stopAll?.(); }
+export function jarvisToggle()      { _r.toggle?.();   }
+export function jarvisListen()      { _r.listen?.();   }
+export function jarvisStopAll()     { _r.stopAll?.();  }
+export function jarvisBuildVoice(description: string, platform: string): Promise<string> {
+  return _r.buildVoice?.(description, platform) ?? Promise.resolve("");
+}
 
 export function dispatchJarvisState(state: JarvisStateEvent): void {
   window.dispatchEvent(new CustomEvent<JarvisStateEvent>("jarvis:state", { detail: state }));

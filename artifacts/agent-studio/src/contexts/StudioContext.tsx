@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { loadData, saveData, KEYS } from "@/lib/storage";
 import { callAI } from "@/lib/ai";
-import { jarvisSpeak } from "@/lib/jarvisVoice";
+import { jarvisSpeak, registerJarvisBuildVoice } from "@/lib/jarvisVoice";
 import { newId } from "@/lib/id";
 import type {
   Project, MemoryEntry, AppSettings, ChatMessage, TrainingModule, AgentStep, Platform,
@@ -1775,6 +1775,15 @@ Output the COMPLETE improved files — include all three files in full:
       }
     })();
   }, [persistProjects, updateProject, persistMemories]);
+
+  // Register startBuild for voice access — VoiceAssistant calls this when "build me X" is spoken
+  const startBuildRef = useRef(startBuild);
+  useEffect(() => { startBuildRef.current = startBuild; }, [startBuild]);
+  useEffect(() => {
+    registerJarvisBuildVoice((desc, platform) =>
+      startBuildRef.current(desc, platform as Platform)
+    );
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <StudioContext.Provider value={{
