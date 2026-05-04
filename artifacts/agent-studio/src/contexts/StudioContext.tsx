@@ -1392,6 +1392,18 @@ Output the COMPLETE improved files — include all three files in full:
   const sendChat = useCallback(async (userText: string, onChunk?: (full: string) => void) => {
     addUserMessage(userText);
 
+    const buildMatch = userText.match(/^\s*(?:build|make|create)\s+me\s+(.+?)(?:\s+(?:for|on)\s+(android|web))?\s*[.!?]*\s*$/i);
+    if (buildMatch) {
+      const description = buildMatch[1]?.trim();
+      const platform = (buildMatch[2]?.toLowerCase() === "android" ? "android" : "web") as Platform;
+      if (description) {
+        const buildId = await startBuild(description, platform);
+        const response = `Certainly, sir. I’m routing that build to Studio now.`;
+        persistChat([...chatRef.current, { id: newId("msg-"), role: "assistant", content: response, actions: [{ type: "startBuild", label: "Build started", data: { description, platform, buildId } }], ts: Date.now() }]);
+        return;
+      }
+    }
+
     const hist = chatRef.current;
     const recentHist = hist.slice(-10);
     const systemPrompt = buildSystemPrompt(memoriesRef.current, modulesRef.current, trainingRef.current);
