@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { loadData, saveData, KEYS } from "@/lib/storage";
 import { callAI } from "@/lib/ai";
+import { jarvisSpeak } from "@/lib/jarvisVoice";
 import { newId } from "@/lib/id";
 import type {
   Project, MemoryEntry, AppSettings, ChatMessage, TrainingModule, AgentStep, Platform,
@@ -1140,6 +1141,15 @@ Output the COMPLETE improved files — include all three files in full:
 
     persistProjects([project, ...projectsRef.current]);
     setActiveBuildId(id);
+    void jarvisSpeak("Build sequence initiated, sir. Five agents are standing by.");
+
+    const AGENT_NARRATIONS: Record<string, string> = {
+      architect: "Architecture complete. Deploying the Builder now.",
+      builder:   "Source code written. Engaging the UI Designer.",
+      designer:  "Interface refined. Running quality assurance.",
+      qa:        "Quality assurance complete. Packaging the application now, sir.",
+      packager:  "Build complete, sir. Your application is ready in Projects.",
+    };
 
     // Run pipeline async
     (async () => {
@@ -1175,6 +1185,11 @@ Output the COMPLETE improved files — include all three files in full:
             updatedAt: Date.now(),
           };
           updateProject(working);
+
+          // J.A.R.V.I.S. narrates each agent's completion (Iron Man style)
+          const narration = AGENT_NARRATIONS[step.role];
+          if (narration) void jarvisSpeak(narration);
+
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Agent failed";
           working = {

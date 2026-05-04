@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useStudio, parseFilesFromText } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import {
-  Send, Trash2, Bot, Copy, Check, ExternalLink,
-  MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck, HammerIcon
+  Send, Trash2, Copy, Check, ExternalLink,
+  MemoryStick, Cpu, Settings2, Star, PlusSquare, CircleCheck, HammerIcon,
+  Mic, MicOff, Radio, Square,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import type { AssistantAction } from "@/lib/types";
+import { jarvisToggle, jarvisListen, jarvisStopAll } from "@/lib/jarvisVoice";
+import type { JarvisStateEvent } from "@/lib/jarvisVoice";
 
 const SUGGESTIONS = [
   "Build me an AI companion Android app with image generation",
@@ -46,19 +48,19 @@ const ACTION_COLORS: Record<AssistantAction["type"], string> = {
 
 const ACTION_DEST: Record<AssistantAction["type"], { label: string; path: string }> = {
   addMemory:      { label: "View in Memory Bank", path: "/memory" },
-  upgradeAgent:   { label: "View in Dashboard", path: "/dashboard" },
-  updateSetting:  { label: "Open Settings", path: "/settings" },
+  upgradeAgent:   { label: "View in Dashboard",   path: "/dashboard" },
+  updateSetting:  { label: "Open Settings",        path: "/settings" },
   featureRequest: { label: "View in Memory Bank", path: "/memory" },
-  addTemplate:    { label: "View in Library", path: "/library" },
+  addTemplate:    { label: "View in Library",      path: "/library" },
   startBuild:     { label: "Watch it build live →", path: "/studio" },
-  scanCode:       { label: "Open Dashboard", path: "/dashboard" },
+  scanCode:       { label: "Open Dashboard",       path: "/dashboard" },
 };
 
 function ActionCard({ action }: { action: AssistantAction }) {
   const [, setLocation] = useLocation();
   const color = ACTION_COLORS[action.type];
-  const icon = ACTION_ICONS[action.type];
-  const dest = ACTION_DEST[action.type];
+  const icon  = ACTION_ICONS[action.type];
+  const dest  = ACTION_DEST[action.type];
   return (
     <div className={cn("flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-xs", color)}>
       <div className="flex items-center gap-2 min-w-0">
@@ -118,8 +120,6 @@ function CodeBlock({ text }: { text: string }) {
 }
 
 function formatMessage(text: string): string {
-  // Remove ```fix ... ``` blocks (they're shown as action cards)
-  // Remove ```files ... ``` blocks (they're shown as code cards)
   return text
     .replace(/```fix[\s\S]*?```/g, "")
     .replace(/```files[\s\S]*?```/g, "")
@@ -130,11 +130,20 @@ function TypingDots() {
   return (
     <div className="flex items-center gap-1 px-1 py-0.5">
       {[0, 1, 2].map(i => (
-        <span
-          key={i}
-          className="typing-dot w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block"
-          style={{ animationDelay: `${i * 0.2}s` }}
-        />
+        <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block"
+          style={{ animationDelay: `${i * 0.2}s` }} />
+      ))}
+    </div>
+  );
+}
+
+function WaveBars({ mode }: { mode: string }) {
+  const bars = mode === "speaking" ? [4,6,5,7,5,6,4] : [3,5,4,6,3];
+  return (
+    <div className="flex items-end gap-[2px] h-4">
+      {bars.map((h, i) => (
+        <span key={i} className={cn("rounded-full animate-bounce", mode === "speaking" ? "bg-emerald-400" : "bg-rose-400")}
+          style={{ width: 2, height: h * 2.5, animationDelay: `${i * 0.1}s`, animationDuration: "0.6s" }} />
       ))}
     </div>
   );
@@ -145,29 +154,177 @@ function UserAvatar({ name, color }: { name: string; color: string }) {
     ? name.trim().split(/\s+/).map(w => w[0]).join("").toUpperCase().slice(0, 2)
     : "JT";
   return (
-    <div
-      className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold text-white"
-      style={{ background: color || "#6366f1" }}
-    >
+    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold text-white"
+      style={{ background: color || "#6366f1" }}>
       {initials}
     </div>
   );
 }
 
+// ── Open Mic Panel ────────────────────────────────────────────
+function OpenMicPanel({
+  voiceMode, handsFree, voiceReply, voiceTranscript, voiceOnline,
+  onToggle, onListen, onStop,
+}: {
+  voiceMode: string; handsFree: boolean; voiceReply: string;
+  voiceTranscript: string; voiceOnline: boolean;
+  onToggle: () => void; onListen: () => void; onStop: () => void;
+}) {
+  const isActive = voiceMode !== "idle" || handsFree;
+
+  const modeColor =
+    voiceMode === "listening" ? "text-rose-400"    :
+    voiceMode === "thinking"  ? "text-amber-400"   :
+    voiceMode === "speaking"  ? "text-emerald-400" :
+    handsFree                 ? "text-fuchsia-400" :
+    "text-white/40";
+
+  const modeLabel =
+    voiceMode === "listening" ? "Listening…"  :
+    voiceMode === "thinking"  ? "Thinking…"   :
+    voiceMode === "speaking"  ? "Speaking…"   :
+    handsFree                 ? "Open Mic Active — always listening" :
+    "";
+
+  if (!isActive) {
+    return (
+      <div className="flex items-center gap-2 px-1">
+        <button
+          onClick={onListen}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border hover:border-primary/50 hover:bg-primary/5 text-xs text-muted-foreground hover:text-foreground transition-all"
+          title="Tap to speak once"
+        >
+          <Mic className="w-3.5 h-3.5" />
+          Tap to speak
+        </button>
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border hover:border-fuchsia-500/50 hover:bg-fuchsia-500/5 text-xs text-muted-foreground hover:text-fuchsia-300 transition-all"
+          title="Activate continuous open mic — say 'Go to sleep Jarvis' to end"
+        >
+          <Radio className="w-3.5 h-3.5" />
+          Activate Open Mic
+        </button>
+        {!voiceOnline && (
+          <span className="text-[10px] text-orange-400 ml-auto">Offline — responses queued</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "rounded-xl border overflow-hidden transition-all duration-300",
+      handsFree
+        ? "bg-fuchsia-950/40 border-fuchsia-500/30"
+        : voiceMode === "listening" ? "bg-rose-950/30 border-rose-500/30"
+        : voiceMode === "speaking"  ? "bg-emerald-950/30 border-emerald-500/30"
+        : "bg-card border-border"
+    )}>
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-2">
+          {/* Animated indicator dot */}
+          <span className={cn(
+            "w-2 h-2 rounded-full shrink-0",
+            voiceMode === "listening" ? "bg-rose-400 animate-pulse"    :
+            voiceMode === "thinking"  ? "bg-amber-400 animate-bounce"  :
+            voiceMode === "speaking"  ? "bg-emerald-400 animate-pulse" :
+            handsFree                 ? "bg-fuchsia-400 animate-ping"  :
+            "bg-white/30"
+          )} />
+          {(voiceMode === "listening" || voiceMode === "speaking") && (
+            <WaveBars mode={voiceMode} />
+          )}
+          <span className={cn("text-[11px] font-medium tracking-wide", modeColor)}>
+            {modeLabel || "J.A.R.V.I.S."}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          {handsFree && (
+            <button
+              onClick={onToggle}
+              className="text-[10px] text-fuchsia-400/60 hover:text-fuchsia-300 transition-colors px-2 py-0.5 rounded border border-fuchsia-500/20 hover:border-fuchsia-500/40"
+            >
+              <MicOff className="w-3 h-3 inline mr-1" />
+              End Open Mic
+            </button>
+          )}
+          <button
+            onClick={onStop}
+            className="p-1 text-white/30 hover:text-white/70 transition-colors"
+            title="Stop all voice"
+          >
+            <Square className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Transcript / reply */}
+      {(voiceTranscript || voiceReply) && (
+        <div className="px-3 pb-3 space-y-1.5">
+          {voiceTranscript && (
+            <div className="flex gap-2">
+              <div className="w-0.5 rounded-full bg-white/20 shrink-0" />
+              <p className="text-[12px] text-white/50 leading-relaxed">{voiceTranscript}</p>
+            </div>
+          )}
+          {voiceReply && (
+            <div className="flex gap-2">
+              <div className={cn("w-0.5 rounded-full shrink-0",
+                voiceMode === "speaking" ? "bg-emerald-400/60" : "bg-primary/40")} />
+              <p className="text-[12px] text-white/80 leading-relaxed">{voiceReply}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {handsFree && !voiceTranscript && !voiceReply && voiceMode === "idle" && (
+        <div className="px-3 pb-3">
+          <p className="text-[11px] text-fuchsia-400/50">
+            Ready — speak naturally at any time · Say "Go to sleep Jarvis" to end
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────
 export default function AssistantPage() {
   const { chatHistory, sendChat, clearChat, settings } = useStudio();
   const firstName = settings.userName.trim().split(/\s+/)[0] || "there";
-  const [input, setInput] = useState("");
+  const [input,   setInput]   = useState("");
   const [sending, setSending] = useState(false);
   const [, setLocation] = useLocation();
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef  = useRef<HTMLTextAreaElement>(null);
+
+  // Voice state — fed by VoiceAssistant via custom events
+  const [voiceMode,       setVoiceMode]       = useState("idle");
+  const [voiceHandsFree,  setVoiceHandsFree]  = useState(false);
+  const [voiceReply,      setVoiceReply]      = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceOnline,     setVoiceOnline]     = useState(true);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { mode, handsFree, reply, transcript, online } = (e as CustomEvent<JarvisStateEvent>).detail;
+      setVoiceMode(mode);
+      setVoiceHandsFree(handsFree);
+      setVoiceReply(reply);
+      setVoiceTranscript(transcript);
+      setVoiceOnline(online);
+    };
+    window.addEventListener("jarvis:state", handler);
+    return () => window.removeEventListener("jarvis:state", handler);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  // Auto-navigate to Studio when Jarvis kicks off a build
+  // Auto-navigate to Studio when J.A.R.V.I.S. kicks off a build
   useEffect(() => {
     const last = chatHistory[chatHistory.length - 1];
     if (last?.role === "assistant" && last.actions) {
@@ -193,10 +350,7 @@ export default function AssistantPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   return (
@@ -210,14 +364,15 @@ export default function AssistantPage() {
           <div>
             <h1 className="text-sm font-semibold">J.A.R.V.I.S.</h1>
             <p className="text-[11px] text-muted-foreground">
-              Just A Rather Very Intelligent System · Builds · Codes · Deploys{settings.groqKey ? " · Groq active" : " · Free via Pollinations"}
+              Just A Rather Very Intelligent System · Builds · Codes · Deploys
+              {settings.groqKey ? " · Groq active" : " · Free via Pollinations"}
             </p>
           </div>
         </div>
         <button
           onClick={clearChat}
           className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded hover:bg-destructive/10"
-          title="Clear chat"
+          title="Clear conversation"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -228,12 +383,13 @@ export default function AssistantPage() {
         {chatHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-6 py-12">
             <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center">
-              <Bot className="w-8 h-8 text-primary" />
+              <span className="text-2xl font-bold text-primary tracking-wider">J</span>
             </div>
             <div className="text-center space-y-2">
               <h2 className="text-lg font-semibold">Good day, {firstName}. What shall I build?</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Describe what you want in plain English — AI companion, security scanner, Android app, anything. I will architect, code, design, test, and deliver it entirely.
+                Describe what you want in plain English — AI companion, security scanner, Android app, anything.
+                I will architect, code, design, test, and deliver it entirely.
               </p>
             </div>
             <div className="grid gap-2 w-full max-w-md">
@@ -251,24 +407,20 @@ export default function AssistantPage() {
         )}
 
         {chatHistory.map((msg) => {
-          const isUser = msg.role === "user";
+          const isUser     = msg.role === "user";
           const displayText = formatMessage(msg.content);
-          const hasFiles = parseFilesFromText(msg.content).length > 0;
-          const actions = msg.actions ?? [];
+          const hasFiles   = parseFilesFromText(msg.content).length > 0;
+          const actions    = msg.actions ?? [];
 
           return (
             <div key={msg.id} className={cn("flex gap-3 slide-up", isUser && "flex-row-reverse")}>
-              {/* Avatar */}
               {isUser
                 ? <UserAvatar name={settings.userName} color={settings.userColor} />
                 : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shrink-0 mt-0.5">
                     <span className="text-[9px] font-bold text-white tracking-widest">J</span>
                   </div>
               }
-
-              {/* Bubble + actions */}
               <div className={cn("max-w-[82%] space-y-2", isUser && "items-end flex flex-col")}>
-                {/* Message bubble */}
                 {(displayText || msg.content === "") && (
                   <div className={cn(
                     "px-3.5 py-2.5 rounded-xl text-sm leading-relaxed",
@@ -281,16 +433,11 @@ export default function AssistantPage() {
                     )}
                   </div>
                 )}
-
-                {/* Action confirmation cards */}
                 {!isUser && actions.length > 0 && (
                   <div className="w-full space-y-1.5">
-                    {actions.map((action, i) => (
-                      <ActionCard key={i} action={action} />
-                    ))}
+                    {actions.map((action, i) => <ActionCard key={i} action={action} />)}
                   </div>
                 )}
-
                 {!isUser && hasFiles && <CodeBlock text={msg.content} />}
               </div>
             </div>
@@ -300,8 +447,8 @@ export default function AssistantPage() {
         {/* Typing indicator */}
         {sending && chatHistory[chatHistory.length - 1]?.role !== "assistant" && (
           <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <Bot className="w-3.5 h-3.5 text-primary" />
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center shrink-0">
+              <span className="text-[9px] font-bold text-white tracking-widest">J</span>
             </div>
             <div className="px-3.5 py-2.5 rounded-xl bg-card border border-border rounded-tl-sm">
               <TypingDots />
@@ -312,8 +459,21 @@ export default function AssistantPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-4 pb-4 pt-2 border-t border-border shrink-0">
+      {/* Voice panel + Input */}
+      <div className="px-4 pb-4 pt-2 border-t border-border shrink-0 space-y-2">
+        {/* Open Mic panel */}
+        <OpenMicPanel
+          voiceMode={voiceMode}
+          handsFree={voiceHandsFree}
+          voiceReply={voiceReply}
+          voiceTranscript={voiceTranscript}
+          voiceOnline={voiceOnline}
+          onToggle={jarvisToggle}
+          onListen={jarvisListen}
+          onStop={jarvisStopAll}
+        />
+
+        {/* Text input */}
         <div className="flex gap-2 items-end bg-card border border-border rounded-xl px-3 py-2 focus-within:border-primary/50 transition-colors">
           <textarea
             ref={inputRef}
@@ -338,8 +498,8 @@ export default function AssistantPage() {
             <Send className="w-3.5 h-3.5" />
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-          Changes apply instantly · No code needed · Enter to send · Shift+Enter for new line
+        <p className="text-[10px] text-muted-foreground text-center">
+          Enter to send · Shift+Enter for new line · Say "Go to sleep Jarvis" to end open mic
         </p>
       </div>
     </div>
