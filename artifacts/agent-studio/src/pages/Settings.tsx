@@ -3,9 +3,11 @@ import { useStudio } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import { pingPollinations } from "@/lib/ai";
 import { saveData, KEYS } from "@/lib/storage";
-import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Circle, Volume2, Radio } from "lucide-react";
+import { SOURCE_FILES } from "@/lib/sourceExport";
+import { CheckCircle2, XCircle, Loader2, Eye, EyeOff, Circle, Volume2, Radio, Download, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAvailableVoices } from "@/components/VoiceAssistant";
+import JSZip from "jszip";
 
 type HealthState = "idle" | "checking" | "ok" | "fail";
 

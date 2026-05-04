@@ -234,6 +234,7 @@ export function VoiceAssistant() {
   const [wakeActive,     setWakeActive]     = useState(false);   // wake listener running
   const [bubblePos,      setBubblePos]      = useState({ right: 16, bottom: 88 });
   const dragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number } | null>(null);
+  const hasDraggedRef = useRef(false);
   const transcriptRef     = useRef("");
   const recognitionRef    = useRef<SpeechRecognition | null>(null);
   const wakeRecognitionRef= useRef<SpeechRecognition | null>(null);
