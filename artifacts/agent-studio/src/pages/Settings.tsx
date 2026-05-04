@@ -20,6 +20,7 @@ export default function SettingsPage() {
   });
   const [testing, setTesting] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [downloadingSource, setDownloadingSource] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [testingVoice, setTestingVoice] = useState(false);
 
@@ -128,6 +129,29 @@ export default function SettingsPage() {
     a.href = URL.createObjectURL(blob);
     a.download = "agent-studio-backup.json";
     a.click();
+  };
+
+  const downloadSourceCode = async () => {
+    setDownloadingSource(true);
+    try {
+      const zip = new JSZip();
+      const files = Object.entries(SOURCE_FILES);
+      for (const [path, content] of files) {
+        zip.file(path, content);
+      }
+      const pkgRes = await fetch("/package.json").catch(() => null);
+      if (pkgRes?.ok) zip.file("package.json", await pkgRes.text());
+      const vcRes = await fetch("/vite.config.ts").catch(() => null);
+      if (vcRes?.ok) zip.file("vite.config.ts", await vcRes.text());
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "agent-studio-source-code.zip";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } finally {
+      setDownloadingSource(false);
+    }
   };
 
   const appLink = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
@@ -481,6 +505,37 @@ export default function SettingsPage() {
             <HealthChip name="pollinations" label="Pollinations AI (free)" />
             <HealthChip name="groq" label="Groq API" />
             <HealthChip name="github" label="GitHub" />
+          </div>
+        </section>
+
+        {/* Source Code Download */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source Code</h2>
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Code2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Download Agent Studio Source</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Download the complete Agent Studio source code as a ZIP — all TypeScript, React components, and styles. Use it to host your own copy or modify it.
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {Object.keys(SOURCE_FILES).length} files bundled
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="w-full text-xs"
+              onClick={downloadSourceCode}
+              disabled={downloadingSource}
+              data-testid="download-source"
+            >
+              {downloadingSource
+                ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Packaging…</>
+                : <><Download className="w-3.5 h-3.5 mr-1.5" />Download Source Code</>
+              }
+            </Button>
           </div>
         </section>
 

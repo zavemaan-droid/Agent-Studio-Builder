@@ -151,6 +151,70 @@ export const INITIAL_MODULES: TrainingModule[] = [
       { id: "scan-upgrades", title: "Upgrade Safety Checks", description: "Flag risky upgrades, missing call-chain updates, and incomplete feature wiring", trained: false },
     ],
   },
+  {
+    id: "pwa-android", title: "PWA & Android Install Mastery", description: "Build installable Progressive Web Apps that work like native Android apps",
+    agentLabel: "Packager", color: "#34d399",
+    lessons: [
+      { id: "pwa-manifest", title: "Web App Manifest Deep Dive", description: "name, short_name, start_url, display, icons — every field that controls how the app appears on the home screen", trained: false },
+      { id: "pwa-service-worker", title: "Service Workers & Caching", description: "Cache-first vs network-first, install/activate/fetch events, and updating cached apps cleanly", trained: false },
+      { id: "pwa-install-prompt", title: "Install Prompt & A2HS Flow", description: "Intercepting beforeinstallprompt, showing the Add to Home Screen banner at the right moment on Android Chrome", trained: false },
+      { id: "pwa-samsung", title: "Samsung Galaxy Optimization", description: "Safe-area insets, Samsung Internet compatibility, viewport meta, touch target sizes (48px min), and overscroll-behavior for S20 FE screens", trained: false },
+      { id: "pwa-offline-ux", title: "Offline UX & Fallback Screens", description: "Detecting offline state, showing friendly offline UI, and syncing queued actions when the connection returns", trained: false },
+    ],
+  },
+  {
+    id: "security-privacy", title: "Security & Privacy Essentials", description: "Build apps users can trust — protect data, prevent attacks, handle credentials safely",
+    agentLabel: "QA", color: "#f87171",
+    lessons: [
+      { id: "xss-csrf", title: "XSS & CSRF Prevention", description: "Sanitising user input, Content Security Policy headers, SameSite cookies, and anti-CSRF tokens", trained: false },
+      { id: "secure-storage", title: "Secure Client-Side Storage", description: "What never to store in localStorage (tokens, passwords), when to use sessionStorage, and encryption options", trained: false },
+      { id: "https-headers", title: "HTTPS & Security Headers", description: "HSTS, X-Frame-Options, Referrer-Policy, and Permissions-Policy — the headers every deployed app needs", trained: false },
+      { id: "auth-best-practice", title: "Auth Security Best Practices", description: "Hashing, salting, JWT pitfalls, refresh token rotation, and why never to roll your own crypto", trained: false },
+    ],
+  },
+  {
+    id: "game-dev", title: "Game Development with Canvas", description: "Build real browser games using HTML5 Canvas and vanilla JavaScript",
+    agentLabel: "Builder", color: "#a78bfa",
+    lessons: [
+      { id: "canvas-basics", title: "Canvas API Fundamentals", description: "getContext('2d'), drawing shapes, images, and text — the rendering loop every game needs", trained: false },
+      { id: "game-loop", title: "The Game Loop & requestAnimationFrame", description: "Delta-time physics, fixed vs variable timestep, and smooth 60fps animation on mobile", trained: false },
+      { id: "collision-input", title: "Collision Detection & Input", description: "AABB collision, keyboard/touch input, and virtual joystick for mobile games", trained: false },
+      { id: "game-state", title: "Game State & Score System", description: "Managing lives, score, levels, start/pause/game-over screens, and localStorage high scores", trained: false },
+      { id: "game-audio", title: "Web Audio API Basics", description: "Playing sound effects and background music using the Web Audio API without external libraries", trained: false },
+    ],
+  },
+  {
+    id: "databases-backend", title: "Databases & Backend-as-a-Service", description: "Add real databases and cloud storage to your apps without managing servers",
+    agentLabel: "Builder", color: "#fb923c",
+    lessons: [
+      { id: "firebase-firestore", title: "Firebase Firestore", description: "Collections, documents, real-time listeners, security rules, and offline persistence", trained: false },
+      { id: "supabase-postgres", title: "Supabase & PostgreSQL", description: "Tables, row-level security, REST API, real-time subscriptions, and Auth integration", trained: false },
+      { id: "cloud-storage", title: "Cloud File Storage", description: "Firebase Storage and Supabase Storage — uploading images/files, generating public URLs, and access control", trained: false },
+      { id: "serverless-functions", title: "Serverless Functions", description: "Firebase Cloud Functions and Supabase Edge Functions — running backend logic without a server", trained: false },
+    ],
+  },
+  {
+    id: "advanced-ux", title: "Advanced UX & Micro-interactions", description: "The details that make apps feel premium and deeply satisfying to use",
+    agentLabel: "Designer", color: "#e879f9",
+    lessons: [
+      { id: "haptic-feedback", title: "Haptic Feedback on Mobile", description: "navigator.vibrate() patterns, timing, and when haptics reinforce actions vs annoy users", trained: false },
+      { id: "skeleton-loading", title: "Skeleton Screens & Progressive Loading", description: "Replacing spinners with skeleton placeholders — perceived performance and user trust", trained: false },
+      { id: "gesture-swipe", title: "Swipe Gestures & Touch Events", description: "Detecting swipe direction, velocity, and snap-back — building swipeable cards and drawers", trained: false },
+      { id: "dark-light-mode", title: "Dark / Light Mode System", description: "prefers-color-scheme, CSS variables, localStorage preference, and instant theme switching without flash", trained: false },
+      { id: "pull-to-refresh", title: "Pull-to-Refresh & Infinite Scroll", description: "Native-feel pull-to-refresh with IntersectionObserver and touch event math", trained: false },
+    ],
+  },
+  {
+    id: "voice-ai", title: "Voice & AI Integration", description: "Add voice control, speech synthesis, and AI superpowers to any app",
+    agentLabel: "Architect", color: "#38bdf8",
+    lessons: [
+      { id: "web-speech-api", title: "Web Speech API — Recognition", description: "SpeechRecognition: continuous vs single-shot, interim results, language settings, and browser support matrix", trained: false },
+      { id: "speech-synthesis", title: "Speech Synthesis & Voice Picking", description: "SpeechSynthesisUtterance, rate/pitch/volume tuning, picking neural vs local voices, and Android Chrome quirks", trained: false },
+      { id: "ai-api-integration", title: "AI API Integration", description: "Calling OpenAI, Groq, and Pollinations from vanilla JS — streaming responses, rate limits, and error handling", trained: false },
+      { id: "llm-prompting-code", title: "LLM Prompting for Code Generation", description: "System prompts, few-shot examples, structured outputs (JSON mode), and getting reliable, runnable code from any LLM", trained: false },
+      { id: "wake-word", title: "Wake Word & Always-On Listening", description: "Lightweight wake-word detection in the browser, battery impact, and graceful degradation on unsupported devices", trained: false },
+    ],
+  },
 ];
 
 // ──────────────────────────────────────────────

@@ -264,6 +264,7 @@ export function VoiceAssistant() {
       if (!dragRef.current) return;
       const dx = dragRef.current.startX - e.clientX;
       const dy = window.innerHeight - e.clientY - dragRef.current.startY;
+      if (Math.abs(dx) + Math.abs(dy) > 5) hasDraggedRef.current = true;
       setBubblePos({
         right: Math.max(8, dragRef.current.startRight + dx),
         bottom: Math.max(8, dragRef.current.startBottom + dy),
@@ -717,6 +718,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
   }, [handsFree, startListening]);
 
   const handleBubbleTap = useCallback(() => {
+    if (hasDraggedRef.current) { hasDraggedRef.current = false; return; }
     const current = modeRef.current;
     if (current === "speaking") {
       window.speechSynthesis.cancel();
@@ -953,6 +955,7 @@ NAVIGATION: Agent Studio has these sections — Dashboard (home/overview), Studi
         <button
           onPointerDown={(e) => {
             if (e.button !== 0) return;
+            hasDraggedRef.current = false;
             dragRef.current = {
               startX: e.clientX,
               startY: window.innerHeight - e.clientY,

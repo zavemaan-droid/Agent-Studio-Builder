@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
 import { cn } from "@/lib/utils";
 import {
-  GraduationCap, CheckCircle2, Circle, Loader2, Sparkles,
-  RotateCcw, ChevronDown, ChevronRight, Trophy, Info, Brain
+  GraduationCap, CheckCircle2, Loader2, Sparkles,
+  RotateCcw, ChevronDown, ChevronRight, Trophy, Info, Brain, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,43 @@ export default function TrainingPage() {
   const [showReset, setShowReset] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [newLessonsFor, setNewLessonsFor] = useState<Set<string>>(new Set());
+
+  const downloadTraining = () => {
+    const lines: string[] = [
+      "# Agent Studio — Training Content",
+      `Exported: ${new Date().toLocaleString()}`,
+      "",
+    ];
+    for (const mod of modules) {
+      const trainedCount = mod.lessons.filter(l => trainingState[`${mod.id}:${l.id}`]).length;
+      lines.push(`## ${mod.title} [${trainedCount}/${mod.lessons.length} learned]`);
+      lines.push(mod.description);
+      lines.push("");
+      for (const lesson of mod.lessons) {
+        const done = trainingState[`${mod.id}:${lesson.id}`] ? "✓" : "○";
+        lines.push(`### ${done} ${lesson.title}`);
+        lines.push(lesson.description);
+        lines.push("");
+      }
+    }
+    const memories_trained = memories.filter(m => m.tags.includes("training"));
+    if (memories_trained.length > 0) {
+      lines.push("---");
+      lines.push("## Saved Training Memories");
+      lines.push("");
+      for (const m of memories_trained) {
+        lines.push(`**${m.title}**`);
+        lines.push(m.body);
+        lines.push("");
+      }
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "jarvis-training-content.md";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const trainedCount = modules.reduce(
@@ -60,9 +97,14 @@ export default function TrainingPage() {
               </p>
             </div>
           </div>
-          <Button size="sm" variant="ghost" className="text-muted-foreground text-xs" onClick={() => setShowReset(true)}>
-            <RotateCcw className="w-3 h-3 mr-1" /> Reset
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" variant="ghost" className="text-muted-foreground text-xs" onClick={downloadTraining}>
+              <Download className="w-3 h-3 mr-1" /> Download
+            </Button>
+            <Button size="sm" variant="ghost" className="text-muted-foreground text-xs" onClick={() => setShowReset(true)}>
+              <RotateCcw className="w-3 h-3 mr-1" /> Reset
+            </Button>
+          </div>
         </div>
       </div>
 
