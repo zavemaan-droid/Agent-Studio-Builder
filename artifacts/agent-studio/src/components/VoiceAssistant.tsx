@@ -491,7 +491,6 @@ AGENT STUDIO SECTIONS: Dashboard (home, Self Upgrade, pipeline overview), Studio
     if (isSleepCommand(text)) {
       handsFreeRef.current = false;
       setHandsFree(false);
-      try { recognitionRef.current?.abort(); } catch { /* ignore */ }
       recognitionRef.current = null;
       stopWakeListener();
       window.speechSynthesis?.cancel();

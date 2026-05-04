@@ -1399,7 +1399,7 @@ Output the COMPLETE improved files — include all three files in full:
       if (description) {
         const buildId = await startBuild(description, platform);
         const response = `Certainly, sir. I’m routing that build to Studio now.`;
-        persistChat([...chatRef.current, { id: newId("msg-"), role: "assistant", content: response, actions: [{ type: "startBuild", label: "Build started", data: { description, platform, buildId } }], ts: Date.now() }]);
+        persistChat([...chatRef.current, { id: newId("msg-"), role: "assistant", content: response, actions: [{ type: "startBuild" as const, label: "Build started", data: { description, platform, buildId }, appliedAt: Date.now() }], ts: Date.now() }]);
         return;
       }
     }
