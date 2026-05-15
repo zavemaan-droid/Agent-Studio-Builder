@@ -3,13 +3,14 @@ import { cn } from "@/lib/utils";
 import { useStudio } from "@/contexts/StudioContext";
 import {
   Zap, MessageSquare, FolderOpen, Brain, GraduationCap, Settings,
-  ChevronLeft, ChevronRight, Circle, LayoutDashboard, Bot, BookOpen, Plus, Code2, PackageOpen, Clapperboard
+  ChevronLeft, ChevronRight, Circle, LayoutDashboard, Bot, BookOpen, Plus, Code2, PackageOpen, Clapperboard, Wrench
 } from "lucide-react";
 import { useState } from "react";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/studio",    label: "Studio",    icon: Zap },
+  { href: "/repair",    label: "Repair",    icon: Wrench },
   { href: "/rebuild",   label: "Rebuild",   icon: PackageOpen },
   { href: "/projects",  label: "Projects",  icon: FolderOpen },
   { href: "/editor",    label: "Editor",    icon: Code2 },
@@ -67,7 +68,7 @@ export function Sidebar() {
       </div>
 
       {/* + New Build */}
-      <div className="px-2 pt-2 pb-1">
+      <div className="px-2 pt-2 pb-1 grid gap-1">
         <button
           onClick={() => setLocation("/studio")}
           className={cn(
@@ -78,6 +79,17 @@ export function Sidebar() {
         >
           <Plus className="w-3.5 h-3.5" />
           {!collapsed && "New Build"}
+        </button>
+        <button
+          onClick={() => setLocation("/repair")}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25 hover:border-amber-400/60 hover:bg-amber-500/15 text-xs font-medium text-amber-300 transition-all",
+            collapsed && "px-0"
+          )}
+          title="Repair / Fix / Upgrade"
+        >
+          <Wrench className="w-3.5 h-3.5" />
+          {!collapsed && "Repair / Upgrade"}
         </button>
       </div>
 

@@ -14,6 +14,7 @@ import DashboardPage from "@/pages/Dashboard";
 import AgentsPage from "@/pages/Agents";
 import LibraryPage from "@/pages/Library";
 import EditorPage from "@/pages/Editor";
+import RepairPage from "@/pages/Repair";
 import RebuildPage from "@/pages/Rebuild";
 import VideoPage from "@/pages/Video";
 
@@ -32,6 +33,8 @@ function AppLayout() {
           <Route path="/dashboard"  component={DashboardPage} />
           <Route path="/assistant"  component={AssistantPage} />
           <Route path="/studio"     component={StudioPage} />
+          <Route path="/repair"     component={RepairPage} />
+          <Route path="/rebuild"    component={RebuildPage} />
           <Route path="/projects"   component={ProjectsPage} />
           <Route path="/agents"     component={AgentsPage} />
           <Route path="/memory"     component={MemoryPage} />
@@ -39,7 +42,6 @@ function AppLayout() {
           <Route path="/training"   component={TrainingPage} />
           <Route path="/settings"   component={SettingsPage} />
           <Route path="/editor"     component={EditorPage} />
-          <Route path="/rebuild"    component={RebuildPage} />
           <Route path="/video"      component={VideoPage} />
           <Route>
             <div className="flex items-center justify-center h-full">
