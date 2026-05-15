@@ -89,15 +89,36 @@ export interface ChatMessage {
   actions?: AssistantAction[];
 }
 
+export type UpgradeCategory =
+  | "Repair"
+  | "Optimization"
+  | "Enhancement"
+  | "New Feature"
+  | "UI/Design Improvement"
+  | "Security Improvement"
+  | "Performance Improvement"
+  | "Builder Training Improvement";
+
+export type InstallerStatus = "pending_approval" | "approved" | "installing" | "installed" | "failed" | "rolled_back";
+
 export interface UpgradeProposal {
   id: string;
   title: string;
   description: string;
   impact: "high" | "medium" | "low";
+  category?: UpgradeCategory;
+  riskLevel?: "low" | "medium" | "high";
+  affectedAreas?: string[];
+  expectedResult?: string;
+  rollbackNote?: string;
+  installerStatus?: InstallerStatus;
+  installerLog?: string[];
   type: "agent_prompt" | "system_behavior";
   agentRole?: string;
   before: string;
   after: string;
+  approvedAt?: number;
+  installedAt?: number;
   appliedAt?: number;
 }
 
