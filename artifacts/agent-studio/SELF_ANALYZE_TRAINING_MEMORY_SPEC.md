@@ -1,4 +1,4 @@
-# Self Analyze, Training School, Automatic Memory Bank, Constraints, and Asset Generator Spec
+# Self Analyze, Training School, Automatic Memory Bank, Constraints, Asset Generator, and Paid Access Spec
 
 This spec defines the next working upgrade for Agent Studio Builder.
 
@@ -27,13 +27,83 @@ It must do a high-critique inspection of the current Agent Studio system before 
 
 It should not always use external sources. The system should use internal memory, training, current app state, and known solutions first. Outside research should only be used when current best practices are needed, a solution is missing, or John approves web research.
 
+## Owner/Admin Access
+
+John is the owner/admin. Owner/admin access should have the full builder system available:
+
+- Self Analyze & Upgrade
+- Approval Installer
+- Repair / Fix / Upgrade
+- Training School
+- Automatic Memory Bank controls
+- Constraints controls
+- Asset Generator
+- provider settings
+- deep system upgrades
+- builder prompt upgrades
+
+Regular users must not see or use owner-only system improvement tools such as Self Analyze & Upgrade, builder prompt upgrades, deep system training controls, or internal installer controls.
+
+## Paid Access and User Tiers
+
+Add a payment/tier model for regular users.
+
+Suggested tiers:
+
+### Owner/Admin
+
+For John only. Full access. No app-build charge.
+
+### Standard User
+
+Suggested price: **$20 per app**.
+
+Standard users can build normal apps but have more constraints enabled. They cannot use owner-only screens. They cannot generate unfiltered apps or turn off higher-level content constraints.
+
+### Pro / No-Extra-Constraints User
+
+Suggested price: **$30 per app**.
+
+Pro users get fewer optional constraints and more creative freedom. Legal and safety guardrails still remain. Pro does not mean illegal or harmful content is allowed.
+
+Pro users may access mature/unfiltered creative mode where allowed by law and platform rules, but they still cannot generate clearly harmful or illegal apps.
+
+## User Visibility Rules
+
+Regular users should not see:
+
+- Self Analyze & Upgrade screen
+- builder prompt internals
+- deep system upgrade controls
+- owner training controls
+- app-wide memory bank internals
+- installer internals beyond their own app job status
+- provider/admin keys
+- unrestricted constraints settings
+
+Regular users may see:
+
+- build form
+- repair/upload flow if allowed by tier
+- their own app projects
+- payment screen
+- limited constraints popup
+- asset generator if allowed by tier
+- status of their own build
+
 ## Builder Freedom and Constraints
 
 Agent Studio should not be overly filtered for normal creative, personal, adult, experimental, fictional, or private app ideas. The builder should try to build what John asks for instead of refusing just because an idea is unusual, mature, edgy, or not a standard business app.
 
-Default behavior should be permissive for legitimate apps, including unfiltered-style apps, mature-themed apps, creative tools, personal companion apps, offline tools, and private-use apps.
+Default owner/admin behavior should be permissive for legitimate apps, including unfiltered-style apps, mature-themed apps, creative tools, personal companion apps, offline tools, and private-use apps.
 
-However, the builder still needs basic hard guardrails for clearly harmful or illegal requests, such as malware, credential theft, stalking, exploitation, instructions for real-world violence, child sexual content, or other abusive systems. If a request crosses that line, Jarvis should redirect toward a safe version of the app rather than silently building something dangerous.
+For regular users, constraints depend on tier:
+
+- Standard users: more constraints enabled by default.
+- Pro users: fewer optional constraints enabled.
+- Owner/admin: full control over optional constraints.
+
+However, all tiers still need basic hard guardrails for clearly harmful or illegal requests, such as malware, credential theft, stalking, exploitation, instructions for real-world violence, child sexual content, or other abusive systems. If a request crosses that line, Jarvis should redirect toward a safe version of the app rather than silently building something dangerous.
 
 The goal is: build broadly, do not over-censor normal app ideas, but do not become a tool for harm.
 
@@ -41,7 +111,7 @@ The goal is: build broadly, do not over-censor normal app ideas, but do not beco
 
 Add a dedicated **Constraints** page where John can check and uncheck build rules.
 
-Most optional constraints should default to OFF. John should decide which constraints apply. The page should support saving global defaults and also changing constraints per project.
+Most optional owner/admin constraints should default to OFF. John should decide which constraints apply. The page should support saving global defaults and also changing constraints per project.
 
 Constraint examples:
 
@@ -84,9 +154,22 @@ The popup should let John:
 - choose whether constraints apply only once or become global defaults
 - continue build/repair after confirming
 
+For regular users, the popup should show only the constraints they are allowed to control under their tier. Locked constraints should be visible only if helpful, with a clear upgrade/paywall message.
+
 This popup should not be annoying or complex. It should be fast: review, check/uncheck, continue.
 
 If John has already set global defaults, the popup should pre-fill those defaults but still allow quick edits.
+
+## Payment Flow
+
+Before a regular user starts a paid build, the app should show pricing clearly:
+
+- Standard build: $20 per app
+- Pro / fewer optional constraints: $30 per app
+
+The system should explain what each tier includes before payment.
+
+Payment confirmation should unlock that specific build job. The paid job should store tier, constraints, project ID, payment status, and build status.
 
 ## Asset Generator
 
@@ -126,6 +209,8 @@ Asset Generator behavior:
 - Should clearly label generated assets and where they are used.
 - Should be mobile-friendly on Samsung Galaxy S20 FE 5G.
 
+For regular users, Asset Generator access may depend on tier. Standard users may get limited asset generation. Pro users may get more asset freedom. Owner/admin gets full access.
+
 Video generation should be treated as provider-dependent. If a free provider is unavailable, the app should still support saving video prompts, storyboard frames, animation plans, or placeholder video assets until a real video provider is configured.
 
 When a build needs images or videos, Jarvis should ask whether to generate assets, use placeholders, or continue without media.
@@ -146,6 +231,7 @@ Self Analyze & Upgrade proposals may include:
 - time-consuming upgrades
 - deep system upgrades
 - asset/media generator upgrades
+- payment/tier/access upgrades
 
 Time-consuming and deep upgrades must be clearly labeled before approval. They should explain why they take longer, what they touch, and what could go wrong.
 
@@ -230,6 +316,7 @@ Training should cover:
 - updated best practices when approved
 - icon/image/video generation workflows
 - asset packaging for generated apps
+- payment/tier/access control behavior
 
 John should be able to add more lessons later, almost like teaching his own AI. The app should support personal training lessons so John can teach his builder system new solutions, preferences, coding rules, app strategies, and design rules.
 
