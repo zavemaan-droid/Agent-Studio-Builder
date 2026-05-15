@@ -1,11 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Zap, FolderOpen, MessageSquare, PackageOpen, Settings, Clapperboard } from "lucide-react";
+import { LayoutDashboard, Zap, FolderOpen, MessageSquare, Wrench, Settings, Clapperboard } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Home",     icon: LayoutDashboard },
   { href: "/studio",    label: "Build",    icon: Zap },
-  { href: "/rebuild",   label: "Rebuild",  icon: PackageOpen },
+  { href: "/repair",    label: "Repair",   icon: Wrench },
   { href: "/projects",  label: "Projects", icon: FolderOpen },
   { href: "/video",     label: "Video",    icon: Clapperboard },
   { href: "/assistant", label: "Chat",     icon: MessageSquare },
