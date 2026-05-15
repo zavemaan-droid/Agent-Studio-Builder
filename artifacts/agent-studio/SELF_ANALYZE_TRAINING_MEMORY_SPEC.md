@@ -1,4 +1,4 @@
-# Self Analyze, Training School, and Automatic Memory Bank Spec
+# Self Analyze, Training School, Automatic Memory Bank, and Constraints Spec
 
 This spec defines the next working upgrade for Agent Studio Builder.
 
@@ -26,6 +26,67 @@ It must do a high-critique inspection of the current Agent Studio system before 
 - missing features
 
 It should not always use external sources. The system should use internal memory, training, current app state, and known solutions first. Outside research should only be used when current best practices are needed, a solution is missing, or John approves web research.
+
+## Builder Freedom and Constraints
+
+Agent Studio should not be overly filtered for normal creative, personal, adult, experimental, fictional, or private app ideas. The builder should try to build what John asks for instead of refusing just because an idea is unusual, mature, edgy, or not a standard business app.
+
+Default behavior should be permissive for legitimate apps, including unfiltered-style apps, mature-themed apps, creative tools, personal companion apps, offline tools, and private-use apps.
+
+However, the builder still needs basic hard guardrails for clearly harmful or illegal requests, such as malware, credential theft, stalking, exploitation, instructions for real-world violence, child sexual content, or other abusive systems. If a request crosses that line, Jarvis should redirect toward a safe version of the app rather than silently building something dangerous.
+
+The goal is: build broadly, do not over-censor normal app ideas, but do not become a tool for harm.
+
+## Constraints Page
+
+Add a dedicated **Constraints** page where John can check and uncheck build rules.
+
+Most optional constraints should default to OFF. John should decide which constraints apply. The page should support saving global defaults and also changing constraints per project.
+
+Constraint examples:
+
+- family-safe mode
+- adult/mature mode allowed
+- unfiltered creative mode
+- offline-first required
+- no cloud dependency
+- no paid APIs
+- Pollinations default
+- OpenAI optional only
+- no Expo
+- PWA Android target
+- Capacitor allowed later
+- security hardening required
+- performance priority
+- accessibility priority
+- minimal dependencies
+- allow internet research
+- allow downloads with approval
+- require approval before installer changes
+- strict code quality
+- fast build mode
+- deep build mode
+- time-consuming upgrades allowed
+- time-consuming upgrades require extra warning
+
+The Constraints page should be clear and mobile-friendly, with large checkbox rows and short explanations.
+
+## Pre-Build / Pre-Repair Constraints Popup
+
+Before starting a new build, Agent Studio should show a constraints popup. Before repairing or upgrading an uploaded app, the same constraints popup should appear.
+
+The popup should let John:
+
+- review active constraints
+- check or uncheck constraints for this specific job
+- add extra custom instructions
+- remove constraints from an uploaded app repair job
+- choose whether constraints apply only once or become global defaults
+- continue build/repair after confirming
+
+This popup should not be annoying or complex. It should be fast: review, check/uncheck, continue.
+
+If John has already set global defaults, the popup should pre-fill those defaults but still allow quick edits.
 
 ## Upgrade Types
 
