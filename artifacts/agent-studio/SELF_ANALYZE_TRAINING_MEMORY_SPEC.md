@@ -1,6 +1,43 @@
-# Self Analyze, Training School, Automatic Memory Bank, Constraints, Asset Generator, and Paid Access Spec
+# Self Analyze, Training School, Automatic Memory Bank, Constraints, Asset Generator, Paid Access, and Legal Gate Spec
 
 This spec defines the next working upgrade for Agent Studio Builder.
+
+## Legal note
+
+This app needs real legal review before public distribution. The app should include strong standard protections, but final Terms, Privacy Policy, copyright/IP language, payment language, and acceptable-use language should be reviewed by a qualified attorney before launch.
+
+## First-Launch Legal Agreement Gate
+
+When a regular user opens the app for the first time, the app should show a legal agreement gate before they can build, repair, generate assets, or pay.
+
+The screen should include:
+
+- short plain-English summary
+- checkbox: "I agree to the Terms of Service, Privacy Policy, Acceptable Use Policy, Payment Terms, and Copyright/IP Terms"
+- disabled Continue button until checked
+- links/buttons to open the full fine print
+- saved agreement timestamp/version
+- ability to re-show agreement when terms are updated
+
+The fine print should be readable inside the app in a mobile-friendly legal viewer.
+
+Legal documents/sections should include:
+
+- Terms of Service
+- Privacy Policy
+- Acceptable Use Policy
+- Payment/Refund Terms
+- Copyright and Intellectual Property Terms
+- Generated Content Disclaimer
+- User Responsibility Disclaimer
+- AI Output Disclaimer
+- No Warranty / Limitation of Liability
+- Pro/Standard tier limits
+- Constraints and safety policy
+- DMCA/copyright contact placeholder
+- Data retention/deletion language
+
+Regular users must agree before using the app. Owner/admin can bypass for development, but the owner should still be able to preview the user agreement flow.
 
 ## Self Analyze & Upgrade
 
@@ -232,6 +269,7 @@ Self Analyze & Upgrade proposals may include:
 - deep system upgrades
 - asset/media generator upgrades
 - payment/tier/access upgrades
+- legal agreement and privacy upgrades
 
 Time-consuming and deep upgrades must be clearly labeled before approval. They should explain why they take longer, what they touch, and what could go wrong.
 
@@ -317,6 +355,7 @@ Training should cover:
 - icon/image/video generation workflows
 - asset packaging for generated apps
 - payment/tier/access control behavior
+- terms/privacy/copyright/legal agreement behavior
 
 John should be able to add more lessons later, almost like teaching his own AI. The app should support personal training lessons so John can teach his builder system new solutions, preferences, coding rules, app strategies, and design rules.
 
