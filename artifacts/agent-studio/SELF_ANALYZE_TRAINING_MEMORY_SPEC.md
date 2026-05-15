@@ -1,4 +1,4 @@
-# Self Analyze, Training School, Automatic Memory Bank, and Constraints Spec
+# Self Analyze, Training School, Automatic Memory Bank, Constraints, and Asset Generator Spec
 
 This spec defines the next working upgrade for Agent Studio Builder.
 
@@ -88,6 +88,48 @@ This popup should not be annoying or complex. It should be fast: review, check/u
 
 If John has already set global defaults, the popup should pre-fill those defaults but still allow quick edits.
 
+## Asset Generator
+
+Add an **Asset Generator** page/section for creating media that can be used inside apps built by Agent Studio.
+
+The Asset Generator should help John create:
+
+- app icons
+- launcher icons
+- splash images
+- logos
+- screenshots
+- UI mockup images
+- background images
+- character images
+- product images
+- placeholders
+- thumbnails
+- short videos
+- intro clips
+- demo clips
+- loading animations
+- media packs for a specific project
+
+The goal is to let John fill in his generated apps with usable pictures and videos instead of leaving apps empty or placeholder-heavy.
+
+Asset Generator behavior:
+
+- Works from a prompt or from a selected project/app context.
+- Can generate app-specific icons and images that match the app style.
+- Can create multiple size variants for icons and UI images.
+- Can save generated assets into a project asset folder or media library.
+- Can attach generated assets to a build or repair job.
+- Can let builders request needed assets during build planning.
+- Can use Pollinations or other free providers by default when possible.
+- Can support optional premium providers if John adds keys later.
+- Should clearly label generated assets and where they are used.
+- Should be mobile-friendly on Samsung Galaxy S20 FE 5G.
+
+Video generation should be treated as provider-dependent. If a free provider is unavailable, the app should still support saving video prompts, storyboard frames, animation plans, or placeholder video assets until a real video provider is configured.
+
+When a build needs images or videos, Jarvis should ask whether to generate assets, use placeholders, or continue without media.
+
 ## Upgrade Types
 
 Self Analyze & Upgrade proposals may include:
@@ -103,6 +145,7 @@ Self Analyze & Upgrade proposals may include:
 - builder training upgrades
 - time-consuming upgrades
 - deep system upgrades
+- asset/media generator upgrades
 
 Time-consuming and deep upgrades must be clearly labeled before approval. They should explain why they take longer, what they touch, and what could go wrong.
 
@@ -185,6 +228,8 @@ Training should cover:
 - common coding mistakes
 - successful solutions from this project
 - updated best practices when approved
+- icon/image/video generation workflows
+- asset packaging for generated apps
 
 John should be able to add more lessons later, almost like teaching his own AI. The app should support personal training lessons so John can teach his builder system new solutions, preferences, coding rules, app strategies, and design rules.
 
