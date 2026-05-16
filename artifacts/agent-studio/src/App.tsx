@@ -17,6 +17,9 @@ import EditorPage from "@/pages/Editor";
 import RepairPage from "@/pages/Repair";
 import RebuildPage from "@/pages/Rebuild";
 import VideoPage from "@/pages/Video";
+import LegalGatePage from "@/pages/LegalGate";
+import ConstraintsPage from "@/pages/Constraints";
+import AssetGeneratorPage from "@/pages/AssetGenerator";
 
 function AppLayout() {
   return (
@@ -43,6 +46,9 @@ function AppLayout() {
           <Route path="/settings"   component={SettingsPage} />
           <Route path="/editor"     component={EditorPage} />
           <Route path="/video"      component={VideoPage} />
+          <Route path="/legal"      component={LegalGatePage} />
+          <Route path="/constraints" component={ConstraintsPage} />
+          <Route path="/assets"     component={AssetGeneratorPage} />
           <Route>
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground text-sm">Page not found</p>
