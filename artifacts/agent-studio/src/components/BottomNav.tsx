@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Zap, FolderOpen, MessageSquare, Wrench, ImageIcon, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, Zap, FolderOpen, MessageSquare, Wrench, ImageIcon, Settings } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Home",     icon: LayoutDashboard },
@@ -9,7 +9,7 @@ const NAV = [
   { href: "/assets",    label: "Assets",   icon: ImageIcon },
   { href: "/projects",  label: "Projects", icon: FolderOpen },
   { href: "/assistant", label: "Chat",     icon: MessageSquare },
-  { href: "/constraints", label: "Rules",  icon: SlidersHorizontal },
+  { href: "/settings",  label: "Settings", icon: Settings },
 ];
 
 export function BottomNav() {
