@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useStudio } from "@/contexts/StudioContext";
 import {
   Zap, MessageSquare, FolderOpen, Brain, GraduationCap, Settings,
-  ChevronLeft, ChevronRight, Circle, LayoutDashboard, Bot, BookOpen, Plus, Code2, PackageOpen, Clapperboard, Wrench
+  ChevronLeft, ChevronRight, Circle, LayoutDashboard, Bot, BookOpen, Plus, Code2, PackageOpen, Clapperboard, Wrench, ImageIcon, SlidersHorizontal, ShieldCheck
 } from "lucide-react";
 import { useState } from "react";
 
@@ -11,6 +11,9 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/studio",    label: "Studio",    icon: Zap },
   { href: "/repair",    label: "Repair",    icon: Wrench },
+  { href: "/assets",    label: "Assets",    icon: ImageIcon },
+  { href: "/constraints", label: "Constraints", icon: SlidersHorizontal },
+  { href: "/legal",     label: "Legal Gate", icon: ShieldCheck },
   { href: "/rebuild",   label: "Rebuild",   icon: PackageOpen },
   { href: "/projects",  label: "Projects",  icon: FolderOpen },
   { href: "/editor",    label: "Editor",    icon: Code2 },
