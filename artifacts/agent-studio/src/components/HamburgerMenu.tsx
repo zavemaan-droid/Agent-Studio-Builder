@@ -31,6 +31,11 @@ export function HamburgerMenu() {
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
+      <div className="mobile-app-title-wrap" aria-label="App name">
+        <span className="mobile-app-title">Agent Studio</span>
+        <span className="mobile-app-subtitle">AI Builder</span>
+      </div>
+
       {isOpen && (
         <>
           <button
