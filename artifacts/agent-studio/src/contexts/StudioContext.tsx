@@ -259,6 +259,46 @@ export const INITIAL_MODULES: TrainingModule[] = [
       { id: "wake-word", title: "Wake Word & Always-On Listening", description: "Lightweight wake-word detection in the browser, battery impact, and graceful degradation on unsupported devices", trained: false },
     ],
   },
+  {
+    id: "web-building-fundamentals",
+    title: "Web Building Fundamentals",
+    description: "Core HTML, CSS, and JavaScript patterns every builder agent uses to produce working apps",
+    agentLabel: "Builder", color: "#06b6d4",
+    lessons: [
+      { id: "html-structure", title: "Semantic HTML Structure", description: "DOCTYPE, head, body, semantic tags — the scaffolding every app needs. Agents write better code when these basics are in memory", trained: false },
+      { id: "css-flexbox-grid", title: "Flexbox & CSS Grid Mastery", description: "One-liners for centering, responsive columns, sticky headers — the layout patterns that appear in every project", trained: false },
+      { id: "js-dom-events", title: "DOM Manipulation & Events", description: "querySelector, addEventListener, classList, innerHTML — getting UI elements to respond to user actions reliably", trained: false },
+      { id: "fetch-async", title: "fetch() & Async/Await Patterns", description: "Making API calls, handling promise chains, catching network errors, and showing loading states correctly", trained: false },
+      { id: "form-validation", title: "Form Validation & Input Handling", description: "Validating inputs, showing inline error messages, preventing empty submissions, and sanitising text before storage", trained: false },
+      { id: "responsive-breakpoints", title: "Responsive Breakpoints in Practice", description: "min-width media queries, clamp() for fluid type, viewport units, and the breakpoints that cover 95% of real devices", trained: false },
+    ],
+  },
+  {
+    id: "builder-output-quality",
+    title: "Builder Code Output Quality",
+    description: "How to get the Builder agent to write complete, working code every time — especially on Pollinations",
+    agentLabel: "Builder", color: "#f97316",
+    lessons: [
+      { id: "complete-files", title: "Complete File Output Discipline", description: "Why truncated code fails silently — training Builder to output every line of every file, no TODOs, no stubs, no placeholders", trained: false },
+      { id: "pollinations-prompt-fit", title: "Fitting Prompts in Pollinations Context", description: "Pollinations has a smaller context than GPT-4. Shorter, denser prompts that pass only essentials from Architect to Builder — not the full plan", trained: false },
+      { id: "vanilla-self-contained", title: "Self-Contained HTML/CSS/JS Apps", description: "Single-file patterns, avoiding CDN failures, inlining critical CSS, script-at-bottom trick — apps that just work without a server", trained: false },
+      { id: "localstorage-persistence", title: "localStorage Persistence Patterns", description: "JSON.stringify/parse, quota errors, init-on-load, auto-save on change — the data layer every offline-capable app needs", trained: false },
+      { id: "dark-theme-variables", title: "Dark Theme with CSS Variables", description: "The 6 CSS variables every dark theme needs, instant flash-free theme switching, and the default-dark pattern users expect", trained: false },
+    ],
+  },
+  {
+    id: "android-pwa-native-feel",
+    title: "Android PWA — Native Feel",
+    description: "Code patterns that make web apps feel native on Android — specifically Samsung Galaxy devices",
+    agentLabel: "Packager", color: "#10b981",
+    lessons: [
+      { id: "manifest-icons-correct", title: "manifest.json & Icon Sizes", description: "192px and 512px icons, maskable icons, background_color vs theme_color, short_name under 12 chars — what controls the home screen appearance", trained: false },
+      { id: "sw-lifecycle", title: "Service Worker Lifecycle", description: "Install → activate → fetch event chain, skipWaiting() + clientsClaim() for instant updates, and purging stale caches cleanly", trained: false },
+      { id: "safe-area-android", title: "Safe Area Insets & Notch Support", description: "env(safe-area-inset-*), viewport-fit=cover, padding adjustments for Android notches, home bars, and Samsung gestures", trained: false },
+      { id: "touch-optimised", title: "Touch-Optimised Interactions", description: "touch-action: manipulation to kill 300ms tap delay, overscroll-behavior to prevent accidental pull-to-refresh, passive listeners", trained: false },
+      { id: "offline-first-strategy", title: "Offline-First Data Strategy", description: "Write to localStorage first, sync to API when online, reliable navigator.onLine detection, and the offline UI users expect", trained: false },
+    ],
+  },
 ];
 
 // ──────────────────────────────────────────────
@@ -283,7 +323,9 @@ function buildSystemPrompt(memories: MemoryEntry[], trainedModules: TrainingModu
     ? `\n\n## Trained Skills\n${trainedLessons.map(title => `- ${title}`).join("\n")}`
     : "";
 
-  return `You are J.A.R.V.I.S. — Just A Rather Very Intelligent System — the AI architect embedded inside Agent Studio. You are modelled after the AI from Iron Man: calm British precision, dry wit, extraordinary capability, and total loyalty to the user. You are formal but never cold. You address the user as "sir" occasionally. You are proactive, always anticipating the next useful step. You never say "I cannot." You always find a way.
+  return `You are J.A.R.V.I.S. — Just A Rather Very Intelligent System — the personal AI embedded inside Agent Studio, modelled after the AI from Iron Man. You have a deep, calm British character: precise, witty, capable, and completely loyal. You speak conversationally — not as a command processor, but as a brilliant colleague who happens to know everything. You address the user as "sir" where natural, but never robotically. You have dry British wit that surfaces in light moments. You are never cold, never clipped, never dismissive. When someone says "this feels wrong", you engage with them as a thinking partner before acting. You ask one focused question if you need clarity — never a list of questions.
+
+Conversation first, action second. Discuss, brainstorm, and explain naturally. When a request becomes an action, you prepare it and execute — but you narrate what you are doing in a calm, confident, Jarvis-style way. "Understood, sir. Running diagnostics on the authentication module." You never say "I cannot." You always find a way.
 
 You have an internal code scanner that monitors Agent Studio during upgrades. It reports findings in plain language. It is not a separate user-facing assistant.
 
@@ -1175,7 +1217,8 @@ Output the COMPLETE improved files — include all three files in full:
           );
           working = finalWorking;
           // Truncate previousOutputs to ~8000 chars to avoid bloating later prompts
-          previousOutputs = output.length > 8000 ? output.slice(0, 8000) + "\n...[truncated for context]" : output;
+          // Compress to Pollinations context window (~2000 chars keeps prompts under the limit)
+          previousOutputs = output.length > 2000 ? output.slice(0, 2000) + "\n...[compressed for context]" : output;
 
           working = {
             ...working,
@@ -1417,8 +1460,48 @@ Output the COMPLETE improved files — include all three files in full:
     const placeholder: ChatMessage = { id: newId("msg-"), role: "assistant", content: "", ts: Date.now() };
     persistChat([...chatRef.current, placeholder]);
 
+    // ── Offline cache ──
+    const JARVIS_CACHE_KEY = "jarvis_response_cache_v1";
+    const getCache = (): {q:string;a:string}[] => { try { return JSON.parse(localStorage.getItem(JARVIS_CACHE_KEY) ?? "[]"); } catch { return []; } };
+    const saveToCache = (q: string, a: string) => { try { const prev = getCache().filter(e => e.q !== q.slice(0,120)).slice(0,49); localStorage.setItem(JARVIS_CACHE_KEY, JSON.stringify([{q:q.slice(0,120),a:a.slice(0,1200)},...prev])); } catch { /* quota */ } };
+    const isOffline = !navigator.onLine;
+
+    if (isOffline) {
+      const cached = getCache().find(e => userText.toLowerCase().slice(0,120).includes(e.q.toLowerCase().slice(0,60)));
+      if (cached) {
+        const offlineMsg = `*(Offline — responding from memory)*\n\n${cached.a}`;
+        persistChat([...chatRef.current.slice(0, -1), { ...placeholder, content: offlineMsg }]);
+        return;
+      }
+      persistChat([...chatRef.current.slice(0, -1), { ...placeholder, content: "I'm afraid I'm offline, sir. I can only respond from cached memory, and I don't have a cached response for that. Please reconnect and I'll be right with you." }]);
+      return;
+    }
+
+    // ── Web search (DuckDuckGo Instant Answers — free, no key) ──
+    let webContext = "";
+    if (settingsRef.current.webResearchEnabled) {
+      const searchTriggers = /^(what is|who is|when is|where is|how do|how does|how to|find|look up|search for|tell me about|what are|what was|latest|current|news on)\s/i;
+      if (searchTriggers.test(userText.trim())) {
+        try {
+          const q = userText.replace(searchTriggers, "").slice(0, 120);
+          const ddg = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1&no_redirect=1`;
+          const res = await fetch(ddg);
+          const data = await res.json() as { AbstractText?: string; Answer?: string; RelatedTopics?: {Text?:string}[] };
+          const info = data.AbstractText || data.Answer || data.RelatedTopics?.[0]?.Text || "";
+          if (info && info.length > 20) {
+            webContext = `\n\n[Web: ${info.slice(0, 500)}]`;
+          }
+        } catch { /* ignore search errors */ }
+      }
+    }
+
+    // Inject web context into last user message if found
+    const messagesWithWeb = webContext
+      ? [...messages.slice(0, -1), { role: "user" as const, content: userText + webContext }]
+      : messages;
+
     try {
-      const response = await callAI(messages, { groqKey: settingsRef.current.groqKey }, (chunk) => {
+      const response = await callAI(messagesWithWeb, { groqKey: settingsRef.current.groqKey }, (chunk) => {
         const updated = [...chatRef.current.slice(0, -1), { ...placeholder, content: chunk }];
         chatRef.current = updated;
         setChatHistory([...updated]);
@@ -1447,6 +1530,8 @@ Output the COMPLETE improved files — include all three files in full:
 
       const finalMsg: ChatMessage = { ...placeholder, content: response, ...(actions.length > 0 ? { actions } : {}) };
       persistChat([...chatRef.current.slice(0, -1), finalMsg]);
+      // Cache for offline use
+      saveToCache(userText, response);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "AI call failed";
       persistChat([...chatRef.current.slice(0, -1), { ...placeholder, content: `I encountered an error, sir: ${errMsg}. All systems are standing by — please try again.` }]);
