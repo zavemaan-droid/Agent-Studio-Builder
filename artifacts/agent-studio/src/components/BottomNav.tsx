@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Zap, FolderOpen, MessageSquare, Wrench, ImageIcon, Settings } from "lucide-react";
+import { LayoutDashboard, Zap, FolderOpen, Bot, Wrench, ImageIcon, Settings } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Home",     icon: LayoutDashboard },
@@ -8,7 +8,7 @@ const NAV = [
   { href: "/repair",    label: "Repair",   icon: Wrench },
   { href: "/assets",    label: "Assets",   icon: ImageIcon },
   { href: "/projects",  label: "Projects", icon: FolderOpen },
-  { href: "/assistant", label: "Chat",     icon: MessageSquare },
+  { href: "/assistant", label: "Jarvis",   icon: Bot },
   { href: "/settings",  label: "Settings", icon: Settings },
 ];
 
@@ -32,7 +32,7 @@ export function BottomNav() {
                 active ? "text-primary" : "text-sidebar-foreground/50"
               )}
             >
-              <Icon className={cn("w-5 h-5 transition-all", active && "scale-110")} />
+              <Icon className={cn("w5 h5 transition-all", active && "scale-110")} />
               <span className={cn(
                 "text-[9px] font-medium tracking-wide transition-all",
                 active ? "opacity-100" : "opacity-60"
