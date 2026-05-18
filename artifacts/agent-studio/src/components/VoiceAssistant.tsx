@@ -153,10 +153,21 @@ function wantsNavigation(text: string): boolean {
   return /\b(take me|go to|show me|navigate|open|where is|find|get to|bring me)\b/.test(text.toLowerCase());
 }
 
+// Priority: British male neural voices first (Chrome on Android + Edge)
 const JARVIS_VOICE_PRIORITY = [
-  "Google UK English Male", "Daniel", "Arthur", "Oliver",
-  "Microsoft George", "Microsoft Ryan", "Microsoft George Online",
-  "Rishi", "Google US English", "Microsoft David", "Microsoft Mark",
+  // Google Chrome British male (best on Android)
+  "Google UK English Male",
+  // Microsoft Edge neural British males (best on desktop/Edge Android)
+  "Microsoft George Online (Natural) - English (United Kingdom)",
+  "Microsoft Ryan Online (Natural) - English (United Kingdom)",
+  "Microsoft Arthur Online (Natural) - English (United Kingdom)",
+  "Microsoft George",
+  "Microsoft Ryan",
+  "Microsoft Arthur",
+  // Other British/Irish male voices
+  "Daniel", "Arthur", "Oliver", "Rishi",
+  // US male fallbacks
+  "Google US English", "Microsoft David", "Microsoft Mark",
   "Microsoft Guy", "Microsoft Steffan", "Alex",
 ];
 
@@ -164,22 +175,44 @@ export function getAvailableVoices(): SpeechSynthesisVoice[] {
   return window.speechSynthesis?.getVoices() ?? [];
 }
 
+const FEMALE_VOICE_NAMES = /female|woman|zira|cortana|siri|samantha|karen|kate|moira|fiona|tessa|victoria|veena|sin-ji|mei-jia|ting-ting|yuna|alice|allison|susan|nicky|kyoko|amelie|anna|ellen|carmen/i;
+
 function pickVoice(savedName?: string): SpeechSynthesisVoice | null {
   const voices = getAvailableVoices();
   if (!voices.length) return null;
+
+  // Use saved voice if it is still available and is male
   if (savedName) {
     const saved = voices.find(v => v.name === savedName);
-    if (saved && /male|man|george|david|mark|daniel|arthur|oliver|ryan|guy|steffan/i.test(saved.name)) return saved;
+    if (saved && !FEMALE_VOICE_NAMES.test(saved.name)) return saved;
   }
+
+  // Work through priority list — skip anything that sounds female
   for (const name of JARVIS_VOICE_PRIORITY) {
     const v = voices.find(v => v.name === name) ?? voices.find(v => v.name.includes(name));
-    if (v) return v;
+    if (v && !FEMALE_VOICE_NAMES.test(v.name)) return v;
   }
-  const neural = voices.find(v => !v.localService && v.lang.startsWith("en"));
-  if (neural) return neural;
-  const gb = voices.find(v => v.lang === "en-GB");
-  if (gb) return gb;
-  return voices.find(v => v.lang.startsWith("en") && /male|man|george|david|mark|daniel|arthur|oliver|ryan|rishi/i.test(v.name))
+
+  // Best British male neural voice (Microsoft Edge)
+  const britishMaleNeural = voices.find(v =>
+    (v.lang === "en-GB" || v.lang === "en-AU") &&
+    !v.localService &&
+    !FEMALE_VOICE_NAMES.test(v.name)
+  );
+  if (britishMaleNeural) return britishMaleNeural;
+
+  // Any en-GB male
+  const britishMale = voices.find(v =>
+    v.lang === "en-GB" && !FEMALE_VOICE_NAMES.test(v.name)
+  );
+  if (britishMale) return britishMale;
+
+  // Any British/Commonwealth voice
+  const british = voices.find(v => v.lang === "en-GB" || v.lang === "en-AU");
+  if (british) return british;
+
+  // Male en-US as final fallback
+  return voices.find(v => v.lang.startsWith("en") && !FEMALE_VOICE_NAMES.test(v.name))
     ?? voices.find(v => v.lang.startsWith("en"))
     ?? voices[0] ?? null;
 }
@@ -720,7 +753,12 @@ AGENT STUDIO SECTIONS: Dashboard (home, Self Upgrade, pipeline overview), Studio
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Suppress unused var warnings — clearQueue/wakeActive/queueStatus exposed via state dispatch
-  void clearQueue; void wakeActive; void queueStatus;
+  // Expose handsFree state for external components (e.g. Assistant mic toggle)
+  useEffect(() => {
+    dispatchJarvisState({ handsFree, mode, transcript, reply, queue, queueStatus, wakeActive, isOnline });
+  }, [handsFree, mode, transcript, reply, queue, queueStatus, wakeActive, isOnline]);
+
+  void clearQueue;
 
   return null;
 }
