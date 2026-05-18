@@ -212,10 +212,11 @@ export default function DashboardPage() {
         customizedAgentRoles: customizedRoles,
       };
 
+      // FIX: removed fullPrompt — it sent the ENTIRE prompt for every agent, causing
+      // token overflow on free Pollinations endpoint, making JSON parsing fail.
       const currentPromptsSnippets = Object.entries(agentPrompts).map(([role, prompt]) => ({
         role,
-        promptPreview: prompt.slice(0, 300) + (prompt.length > 300 ? "..." : ""),
-        fullPrompt: prompt,
+        promptPreview: prompt.slice(0, 250) + (prompt.length > 250 ? "..." : ""),
       }));
 
       const aiPrompt = `You are the Self-Upgrade AI for Agent Studio. Return 4 upgrade proposals for the agent prompts below.
@@ -223,7 +224,7 @@ export default function DashboardPage() {
 Current system state:
 ${JSON.stringify(systemState, null, 2)}
 
-Current agent prompts to improve:
+Current agent prompts to improve (first 250 chars each):
 ${JSON.stringify(currentPromptsSnippets, null, 2)}
 
 Return ONLY valid JSON. No markdown. No explanation. No extra text.
