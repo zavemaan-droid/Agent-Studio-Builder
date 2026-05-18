@@ -369,13 +369,32 @@ export default function AssistantPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={clearChat}
-          className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded hover:bg-destructive/10"
-          title="Clear conversation"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Open Mic Toggle */}
+          <button
+            onClick={() => jarvisToggle()}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all",
+              voiceHandsFree
+                ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-400"
+                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            )}
+            title={voiceHandsFree ? "Open mic active — tap to disable" : "Enable open mic — Jarvis always listens"}
+          >
+            {voiceHandsFree
+              ? <><Radio className="w-3.5 h-3.5 animate-pulse" /><span>Listening</span></>
+              : <><Mic className="w-3.5 h-3.5" /><span>Open Mic</span></>
+            }
+          </button>
+          {/* Clear chat */}
+          <button
+            onClick={clearChat}
+            className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded hover:bg-destructive/10"
+            title="Clear conversation"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
