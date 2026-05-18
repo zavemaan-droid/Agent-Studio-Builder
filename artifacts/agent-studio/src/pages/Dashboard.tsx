@@ -26,12 +26,13 @@ const IMPACT_STYLE: Record<string, string> = {
 };
 
 function ProposalCard({
-  proposal, appliedIds, skippedIds,
+  proposal, appliedIds, skippedIds, installingId,
   onApply, onSkip,
 }: {
   proposal: UpgradeProposal;
   appliedIds: Set<string>;
   skippedIds: Set<string>;
+  installingId: string | null;
   onApply: (p: UpgradeProposal) => Promise<void> | void;
   onSkip: (id: string) => void;
 }) {
@@ -123,9 +124,12 @@ function ProposalCard({
               size="sm"
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => void onApply(proposal)}
+              disabled={installingId === proposal.id}
             >
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              Apply Upgrade Permanently
+              {installingId === proposal.id
+                ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Installing…</>
+                : <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Apply Upgrade Permanently</>
+              }
             </Button>
             <Button
               size="sm"
@@ -140,9 +144,12 @@ function ProposalCard({
         )}
 
         {applied && (
-          <div className="text-xs text-emerald-400 flex items-center gap-1.5">
-            <Brain className="w-3.5 h-3.5" />
-            Permanently applied — all future builds will use this improved agent prompt.
+          <div className="flex flex-col gap-1">
+            <div className="text-xs text-emerald-400 flex items-center gap-1.5">
+              <Brain className="w-3.5 h-3.5" />
+              <span className="font-medium">Installed</span>
+              <span className="text-emerald-400/70">— next build uses this improved {proposal.agentRole ?? "agent"} prompt</span>
+            </div>
           </div>
         )}
       </div>
@@ -313,9 +320,22 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
     }
   };
 
-  const handleApply = (proposal: UpgradeProposal) => {
+  const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
+
+  const handleApply = async (proposal: UpgradeProposal) => {
+    setInstallingId(proposal.id);
+    // Brief install animation — gives feedback that something is happening
+    await new Promise(r => setTimeout(r, 800));
     applyUpgrade(proposal);
     setAppliedIds(prev => new Set(prev).add(proposal.id));
+    setInstalledIds(prev => new Set(prev).add(proposal.id));
+    setInstallingId(null);
+    // Jarvis narrates the install
+    try {
+      const { jarvisSpeak } = await import("@/lib/jarvisVoice");
+      void jarvisSpeak(`${proposal.agentRole ?? "Agent"} prompt upgraded, sir. The improvement will take effect on the next build.`);
+    } catch { /* voice optional */ }
   };
 
   const handleSkip = (id: string) => {
@@ -436,6 +456,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
                     proposal={p}
                     appliedIds={appliedIds}
                     skippedIds={skippedIds}
+                    installingId={installingId}
                     onApply={handleApply}
                     onSkip={handleSkip}
                   />
