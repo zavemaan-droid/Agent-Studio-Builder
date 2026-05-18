@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
   Zap, Globe, Smartphone, CheckCircle2, Circle, Loader2,
-  XCircle, ChevronDown, ChevronRight, Upload, X, RefreshCw
+  XCircle, ChevronDown, ChevronRight, Upload, X, RefreshCw, Eye, ExternalLink, Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Platform, AgentStep } from "@/lib/types";
@@ -205,6 +205,32 @@ export default function StudioPage() {
           </div>
         </div>
 
+        {/* Platform info — what each mode produces */}
+        <div className={cn(
+          "rounded-lg border px-3 py-2.5 text-xs transition-colors",
+          platform === "web"
+            ? "border-blue-500/20 bg-blue-500/5 text-blue-300"
+            : "border-emerald-500/20 bg-emerald-500/5 text-emerald-300"
+        )}>
+          {platform === "web" ? (
+            <div className="flex items-start gap-2">
+              <Monitor className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium">Web App</span>
+                <span className="text-muted-foreground ml-1.5">— Generates index.html + styles.css + app.js. Works in any browser, no install needed. Can be pinned as a PWA on Android.</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <Smartphone className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium">Android App (PWA)</span>
+                <span className="text-muted-foreground ml-1.5">— Generates a full installable PWA with manifest.json + service worker + offline support. Open in Chrome → Add to Home Screen on your Android device.</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Description */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">App Description</p>
@@ -285,16 +311,88 @@ export default function StudioPage() {
                 />
               ))}
             </div>
-            {activeProject.status === "ready" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full text-xs"
-                onClick={() => setLocation("/projects")}
-              >
-                View in Projects
-              </Button>
-            )}
+            {activeProject.status === "ready" && (() => {
+              const htmlFile = activeProject.files?.find(f => f.path === "index.html" || f.path.endsWith(".html"));
+              const cssFile  = activeProject.files?.find(f => f.path.endsWith(".css"));
+              const jsFile   = activeProject.files?.find(f => f.path.endsWith(".js"));
+
+              // Build standalone HTML blob with embedded CSS + JS
+              let previewHtml = htmlFile?.content ?? "";
+              if (previewHtml && cssFile) {
+                previewHtml = previewHtml.replace(/<link[^>]+rel=["']stylesheet["'][^>]*>/i,
+                  `<style>${cssFile.content}</style>`);
+              }
+              if (previewHtml && jsFile) {
+                previewHtml = previewHtml.replace(/<script[^>]+src=["'][^"']+["'][^>]*><\/script>/i,
+                  `<script>${jsFile.content}</script>`);
+              }
+
+              const hasPreview = !!previewHtml;
+
+              const openPreview = () => {
+                if (!previewHtml) return;
+                const blob = new Blob([previewHtml], { type: "text/html" });
+                const url = URL.createObjectURL(blob);
+                window.open(url, "_blank");
+              };
+
+              const downloadApp = () => {
+                if (!activeProject.files?.length) return;
+                // Download all files as text
+                const content = activeProject.files.map(f =>
+                  `/* ======= ${f.path} ======= */
+${f.content}`
+                ).join("
+
+");
+                const blob = new Blob([content], { type: "text/plain" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `${activeProject.name.replace(/\s+/g, "-").toLowerCase()}.txt`;
+                a.click();
+              };
+
+              return (
+                <div className="space-y-2">
+                  {/* Inline iframe preview for web apps */}
+                  {hasPreview && (
+                    <div className="rounded-xl border border-emerald-500/30 overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-emerald-500/5 border-b border-emerald-500/20">
+                        <div className="flex items-center gap-1.5 text-emerald-400">
+                          <Eye className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium">Live Preview</span>
+                        </div>
+                        <button
+                          onClick={openPreview}
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Open full screen
+                        </button>
+                      </div>
+                      <iframe
+                        srcDoc={previewHtml}
+                        className="w-full h-64 bg-white"
+                        sandbox="allow-scripts allow-same-origin allow-forms"
+                        title="Live app preview"
+                      />
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    {hasPreview && (
+                      <Button size="sm" className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={openPreview}>
+                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open App
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={downloadApp}>
+                      Download Files
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setLocation("/projects")}>
+                      Projects
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
