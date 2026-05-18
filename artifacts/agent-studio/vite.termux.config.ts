@@ -1,14 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 // Termux / Samsung Galaxy S20 FE 5G local run config.
-// This avoids Replit-only Vite plugins and uses process.cwd() so Android/Termux
-// paths resolve reliably when running from artifacts/agent-studio.
+// This avoids Replit-only Vite plugins and skips @tailwindcss/vite because
+// its lightningcss native package is not reliable in Android Termux.
 export default defineConfig({
   base: "/",
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(process.cwd(), "src"),
