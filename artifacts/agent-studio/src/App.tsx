@@ -3,7 +3,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
-import { VoiceAssistant } from "@/components/VoiceAssistant";
 import AssistantPage from "@/pages/Assistant";
 import StudioPage from "@/pages/Studio";
 import ProjectsPage from "@/pages/Projects";
@@ -24,10 +23,8 @@ import AssetGeneratorPage from "@/pages/AssetGenerator";
 function AppLayout() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
-      {/* Desktop sidebar — hidden on mobile */}
       <Sidebar />
 
-      {/* Main content — bottom padding on mobile to clear the bottom nav + safe area */}
       <main className="mobile-safe-main flex-1 min-w-0 overflow-hidden">
         <Switch>
           <Route path="/">
@@ -57,11 +54,7 @@ function AppLayout() {
         </Switch>
       </main>
 
-      {/* Mobile bottom navigation */}
       <BottomNav />
-
-      {/* Jarvis floating voice bubble — positioned above bottom nav on mobile */}
-      <VoiceAssistant />
     </div>
   );
 }
