@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 import AssistantPage from "@/pages/Assistant";
 import StudioPage from "@/pages/Studio";
 import ProjectsPage from "@/pages/Projects";
@@ -55,6 +56,7 @@ function AppLayout() {
       </main>
 
       <BottomNav />
+      <VoiceAssistant />
     </div>
   );
 }
