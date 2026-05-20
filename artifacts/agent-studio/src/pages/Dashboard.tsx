@@ -6,46 +6,120 @@ import {
   Bot, Zap, Box, TrendingUp, ChevronRight, Loader2,
   CheckCircle2, Sparkles, Globe, Smartphone, ArrowRight,
   XCircle, AlertTriangle, History, ChevronDown, Eye, EyeOff,
-  Cpu, RefreshCcw, Brain
+  Cpu, RefreshCcw, Brain, Shield, ListChecks, RotateCcw,
+  Terminal, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { UpgradeProposal } from "@/lib/types";
 
 const AGENT_PIPELINE = [
-  { role: "architect", name: "Architect", color: "#f59e0b", desc: "Plans the entire app structure" },
-  { role: "builder", name: "Builder", color: "#6366f1", desc: "Writes all source code" },
-  { role: "designer", name: "UI Designer", color: "#7c3aed", desc: "Enhances UI/UX" },
-  { role: "qa", name: "QA", color: "#10b981", desc: "Finds and fixes bugs" },
-  { role: "packager", name: "Packager", color: "#ec4899", desc: "Finalises output" },
+  { role: "architect", name: "Architect",  color: "#f59e0b", desc: "Plans the entire app structure" },
+  { role: "builder",   name: "Builder",    color: "#6366f1", desc: "Writes all source code" },
+  { role: "designer",  name: "UI Designer",color: "#7c3aed", desc: "Enhances UI/UX" },
+  { role: "qa",        name: "QA",         color: "#10b981", desc: "Finds and fixes bugs" },
+  { role: "packager",  name: "Packager",   color: "#ec4899", desc: "Finalises output" },
 ];
 
 const IMPACT_STYLE: Record<string, string> = {
-  high: "bg-red-500/15 text-red-400 border-red-500/30",
+  high:   "bg-red-500/15 text-red-400 border-red-500/30",
   medium: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  low: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  low:    "bg-blue-500/15 text-blue-400 border-blue-500/30",
 };
 
+const RISK_STYLE: Record<string, string> = {
+  high:   "text-red-400",
+  medium: "text-amber-400",
+  low:    "text-emerald-400",
+};
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  "Repair":                       Brain,
+  "Security Improvement":         Shield,
+  "Builder Training Improvement": ListChecks,
+  "Performance Improvement":      Zap,
+};
+
+// ── Installer: applies an approved upgrade and emits log lines ────────────────
+async function runInstaller(
+  proposal: UpgradeProposal,
+  applyUpgradeFn: (p: UpgradeProposal) => void,
+  onLog: (line: string) => void
+): Promise<{ success: boolean; log: string[] }> {
+  const log: string[] = [];
+  const emit = (line: string) => { log.push(line); onLog(line); };
+
+  emit(`[installer] Starting installation of: ${proposal.title}`);
+  emit(`[installer] Type: ${proposal.type} | Impact: ${proposal.impact}`);
+
+  await new Promise(r => setTimeout(r, 300));
+  emit(`[installer] Validating proposal structure…`);
+
+  if (!proposal.before || !proposal.after) {
+    emit(`[installer] ERROR — before/after content missing. Aborting.`);
+    return { success: false, log };
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+
+  if (proposal.type === "agent_prompt") {
+    emit(`[installer] Target agent: ${proposal.agentRole ?? "unknown"}`);
+    emit(`[installer] Writing new prompt to agent store…`);
+    await new Promise(r => setTimeout(r, 400));
+    applyUpgradeFn(proposal);
+    emit(`[installer] Agent prompt updated. Change is permanent and will apply to all future builds.`);
+    if (proposal.rollbackNote) {
+      emit(`[installer] Rollback note: ${proposal.rollbackNote}`);
+    }
+  } else if (proposal.type === "system_behavior") {
+    emit(`[installer] System behavior upgrade — recording to memory bank…`);
+    await new Promise(r => setTimeout(r, 400));
+    applyUpgradeFn(proposal);
+    emit(`[installer] Behavior change logged to upgrade history.`);
+    emit(`[installer] Note: system_behavior changes inform future AI-generated proposals and Jarvis context.`);
+    if (proposal.affectedAreas?.length) {
+      emit(`[installer] Affected areas: ${proposal.affectedAreas.join(", ")}`);
+    }
+    if (proposal.expectedResult) {
+      emit(`[installer] Expected result: ${proposal.expectedResult}`);
+    }
+  } else {
+    emit(`[installer] Proposal type "${proposal.type}" — recording to upgrade history.`);
+    applyUpgradeFn(proposal);
+  }
+
+  await new Promise(r => setTimeout(r, 200));
+  emit(`[installer] ✅ Installation complete.`);
+  return { success: true, log };
+}
+
+// ── ProposalCard ──────────────────────────────────────────────────────────────
 function ProposalCard({
-  proposal, appliedIds, skippedIds, installingId,
+  proposal, appliedIds, skippedIds, installingId, installerLogs,
   onApply, onSkip,
 }: {
   proposal: UpgradeProposal;
   appliedIds: Set<string>;
   skippedIds: Set<string>;
   installingId: string | null;
+  installerLogs: Record<string, string[]>;
   onApply: (p: UpgradeProposal) => Promise<void> | void;
   onSkip: (id: string) => void;
 }) {
   const [showDiff, setShowDiff] = useState(false);
+  const [showLog, setShowLog]   = useState(false);
   const [activeTab, setActiveTab] = useState<"before" | "after">("after");
-  const applied = appliedIds.has(proposal.id);
-  const skipped = skippedIds.has(proposal.id);
+  const applied  = appliedIds.has(proposal.id);
+  const skipped  = skippedIds.has(proposal.id);
+  const isInstalling = installingId === proposal.id;
+  const log = installerLogs[proposal.id] ?? [];
+
+  const CategoryIcon = CATEGORY_ICONS[proposal.category ?? ""] ?? Sparkles;
 
   return (
     <div className={cn(
       "rounded-xl border bg-card overflow-hidden transition-all",
-      applied && "border-emerald-500/40 bg-emerald-500/5",
-      skipped && "opacity-50 border-border",
+      applied  && "border-emerald-500/40 bg-emerald-500/5",
+      skipped  && "opacity-50 border-border",
       !applied && !skipped && "border-border hover:border-primary/30"
     )}>
       <div className="p-4 space-y-3">
@@ -65,9 +139,15 @@ function ProposalCard({
                   {proposal.agentRole} agent
                 </span>
               )}
+              {proposal.category && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground flex items-center gap-1">
+                  <CategoryIcon className="w-2.5 h-2.5" />
+                  {proposal.category}
+                </span>
+              )}
               {applied && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-2.5 h-2.5" /> Applied
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Installed
                 </span>
               )}
             </div>
@@ -75,17 +155,49 @@ function ProposalCard({
           </div>
         </div>
 
+        {/* Risk + affected areas */}
+        {(proposal.riskLevel || proposal.affectedAreas?.length || proposal.expectedResult) && (
+          <div className="rounded-lg bg-muted/30 border border-border p-3 space-y-1.5 text-xs">
+            {proposal.riskLevel && (
+              <div className="flex items-center gap-1.5">
+                <Shield className="w-3 h-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Risk:</span>
+                <span className={cn("font-medium", RISK_STYLE[proposal.riskLevel])}>
+                  {proposal.riskLevel}
+                </span>
+              </div>
+            )}
+            {proposal.affectedAreas?.length ? (
+              <div className="flex items-start gap-1.5">
+                <Info className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
+                <span className="text-muted-foreground">Affects: {proposal.affectedAreas.join(", ")}</span>
+              </div>
+            ) : null}
+            {proposal.expectedResult && (
+              <div className="flex items-start gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="text-muted-foreground">{proposal.expectedResult}</span>
+              </div>
+            )}
+            {proposal.rollbackNote && (
+              <div className="flex items-start gap-1.5">
+                <RotateCcw className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
+                <span className="text-muted-foreground">Rollback: {proposal.rollbackNote}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Diff toggle */}
         <button
           onClick={() => setShowDiff(d => !d)}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {showDiff ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-          {showDiff ? "Hide" : "Show"} prompt diff
+          {showDiff ? "Hide" : "Show"} diff
           <ChevronDown className={cn("w-3 h-3 transition-transform", showDiff && "rotate-180")} />
         </button>
 
-        {/* Before / After diff */}
         {showDiff && (
           <div className="rounded-lg border border-border overflow-hidden text-xs">
             <div className="flex border-b border-border">
@@ -95,18 +207,14 @@ function ProposalCard({
                   "flex-1 py-1.5 text-center text-[11px] font-medium transition-colors",
                   activeTab === "before" ? "bg-red-500/10 text-red-400" : "text-muted-foreground hover:text-foreground"
                 )}
-              >
-                Before
-              </button>
+              >Before</button>
               <button
                 onClick={() => setActiveTab("after")}
                 className={cn(
                   "flex-1 py-1.5 text-center text-[11px] font-medium transition-colors",
                   activeTab === "after" ? "bg-emerald-500/10 text-emerald-400" : "text-muted-foreground hover:text-foreground"
                 )}
-              >
-                After (proposed)
-              </button>
+              >After (proposed)</button>
             </div>
             <pre className={cn(
               "p-3 text-[11px] leading-relaxed overflow-y-auto max-h-40 whitespace-pre-wrap",
@@ -124,32 +232,43 @@ function ProposalCard({
               size="sm"
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => void onApply(proposal)}
-              disabled={installingId === proposal.id}
+              disabled={isInstalling}
             >
-              {installingId === proposal.id
+              {isInstalling
                 ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Installing…</>
-                : <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Apply Upgrade Permanently</>
+                : <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Approve &amp; Install</>
               }
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onSkip(proposal.id)}
-              className="text-muted-foreground"
-            >
-              <XCircle className="w-3.5 h-3.5 mr-1" />
-              Skip
+            <Button size="sm" variant="outline" onClick={() => onSkip(proposal.id)} className="text-muted-foreground">
+              <XCircle className="w-3.5 h-3.5 mr-1" />Skip
             </Button>
           </div>
         )}
 
-        {applied && (
-          <div className="flex flex-col gap-1">
-            <div className="text-xs text-emerald-400 flex items-center gap-1.5">
-              <Brain className="w-3.5 h-3.5" />
-              <span className="font-medium">Installed</span>
-              <span className="text-emerald-400/70">— next build uses this improved {proposal.agentRole ?? "agent"} prompt</span>
-            </div>
+        {/* Installer log */}
+        {log.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowLog(l => !l)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Terminal className="w-3 h-3" />
+              {showLog ? "Hide" : "Show"} installer log
+              <ChevronDown className={cn("w-3 h-3 transition-transform", showLog && "rotate-180")} />
+            </button>
+            {showLog && (
+              <div className="mt-2 rounded-lg bg-black/40 border border-border p-3 font-mono text-[10px] text-green-400/80 space-y-0.5 max-h-32 overflow-y-auto">
+                {log.map((line, i) => <div key={i}>{line}</div>)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {applied && !log.length && (
+          <div className="text-xs text-emerald-400 flex items-center gap-1.5">
+            <Brain className="w-3.5 h-3.5" />
+            <span className="font-medium">Installed</span>
+            <span className="text-emerald-400/70">— active from next build</span>
           </div>
         )}
       </div>
@@ -177,24 +296,25 @@ export default function DashboardPage() {
   } = useStudio();
   const [, setLocation] = useLocation();
   const [generating, setGenerating] = useState(false);
-  const [proposals, setProposals] = useState<UpgradeProposal[]>([]);
+  const [proposals, setProposals]   = useState<UpgradeProposal[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [installerLogs, setInstallerLogs] = useState<Record<string, string[]>>({});
+  const [error, setError]           = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [showReset, setShowReset] = useState(false);
+  const [showReset, setShowReset]   = useState(false);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const readyProjects = projects.filter(p => p.status === "ready").length;
-  const totalLessons = modules.reduce((a, m) => a + m.lessons.length, 0);
+  const totalLessons  = modules.reduce((a, m) => a + m.lessons.length, 0);
   const trainedLessons = modules.reduce(
     (a, m) => a + m.lessons.filter(l => trainingState[`${m.id}:${l.id}`]).length, 0
   );
   const memorySavedCount = memories.filter(m => m.autoInclude).length;
-  const appliedUpgrades = upgradeHistory.length;
-  const customizedRoles = Object.keys(agentPrompts).filter(
+  const appliedUpgrades  = upgradeHistory.length;
+  const customizedRoles  = Object.keys(agentPrompts).filter(
     role => agentPrompts[role] !== DEFAULT_AGENT_PROMPTS[role]
   );
 
@@ -204,6 +324,7 @@ export default function DashboardPage() {
     setProposals([]);
     setAppliedIds(new Set());
     setSkippedIds(new Set());
+    setInstallerLogs({});
 
     try {
       const { callAI } = await import("@/lib/ai");
@@ -219,8 +340,6 @@ export default function DashboardPage() {
         customizedAgentRoles: customizedRoles,
       };
 
-      // FIX: removed fullPrompt — it sent the ENTIRE prompt for every agent, causing
-      // token overflow on free Pollinations endpoint, making JSON parsing fail.
       const currentPromptsSnippets = Object.entries(agentPrompts).map(([role, prompt]) => ({
         role,
         promptPreview: prompt.slice(0, 250) + (prompt.length > 250 ? "..." : ""),
@@ -237,27 +356,28 @@ ${JSON.stringify(currentPromptsSnippets, null, 2)}
 Return ONLY valid JSON. No markdown. No explanation. No extra text.
 Return a JSON array with exactly 4 objects.
 
-Each object in the array must have exactly these fields:
-- "id": a unique string like "up-001"
+Each object must have exactly these fields:
+- "id": unique string like "up-001"
 - "title": short descriptive title (string)
 - "description": 1-2 sentences on what improves and why (string)
-- "impact": one of these exact values — "high", "medium", or "low"
-- "type": always "agent_prompt"
-- "agentRole": one of — "architect", "builder", "designer", "qa", "packager"
+- "impact": "high", "medium", or "low"
+- "type": "agent_prompt" or "system_behavior"
+- "agentRole": one of "architect","builder","designer","qa","packager" (required for agent_prompt type)
+- "category": one of "Repair","Optimization","Enhancement","New Feature","UI/Design Improvement","Security Improvement","Performance Improvement","Builder Training Improvement"
+- "riskLevel": "low","medium","high"
+- "affectedAreas": array of affected area strings (e.g. ["builder agent","build pipeline"])
+- "expectedResult": one sentence on what improves after install (string)
+- "rollbackNote": one sentence on how to undo (string)
 - "before": the exact current prompt text for that agent (copy it)
-- "after": the full improved prompt text (not a description — the actual prompt)
+- "after": the full improved prompt text (the actual prompt, not a description)
 
-Example of correct format:
-[{"id":"up-001","title":"Better Builder Output","description":"Adds stricter output format rules.","impact":"high","type":"agent_prompt","agentRole":"builder","before":"current prompt...","after":"improved full prompt..."}]
-
-Favor changes that reduce bugs, prevent unsafe output, improve prompt reliability, and make builds faster or more consistent. Make 4 substantive improvements. Do not add markdown. Start with [ immediately.`;
+Favor changes that reduce bugs, prevent unsafe output, improve reliability. Make 4 substantive improvements. Do not add markdown. Start with [.`;
 
       const raw = await callAI(
         [{ role: "user", content: aiPrompt }],
         { groqKey: settings.groqKey }
       );
 
-      // Strip any markdown fences the AI may have added despite instructions
       const stripped = raw
         .replace(/^```(?:json)?\s*/i, "")
         .replace(/\s*```\s*$/, "")
@@ -267,7 +387,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         const candidates = [text, raw, stripped, raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? ""].filter(Boolean);
         for (const candidate of candidates) {
           const start = candidate.indexOf("[");
-          const end = candidate.lastIndexOf("]");
+          const end   = candidate.lastIndexOf("]");
           if (start !== -1 && end !== -1 && end > start) {
             try {
               const parsed = JSON.parse(candidate.slice(start, end + 1)) as unknown;
@@ -280,19 +400,21 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
 
       const buildLocalProposals = (): UpgradeProposal[] => {
         const roles: (keyof typeof DEFAULT_AGENT_PROMPTS)[] = ["architect", "builder", "designer", "qa"];
-        return roles.map((role, i) => {
-          const prompt = agentPrompts[role];
-          return {
-            id: `local-${Date.now()}-${i}`,
-            title: `${role[0].toUpperCase() + role.slice(1)} prompt hardening`,
-            description: "Locally generated upgrade to improve prompt consistency and reliability.",
-            impact: "medium",
-            type: "agent_prompt",
-            agentRole: role,
-            before: prompt,
-            after: `${prompt}\n\nAdditional rules:\n- Be explicit.\n- Return only valid structured output.\n- Never add markdown fences unless required.`,
-          } satisfies UpgradeProposal;
-        });
+        return roles.map((role, i) => ({
+          id: `local-${Date.now()}-${i}`,
+          title: `${role[0].toUpperCase() + role.slice(1)} prompt hardening`,
+          description: "Locally generated upgrade to improve prompt consistency and reliability.",
+          impact: "medium" as const,
+          type: "agent_prompt" as const,
+          agentRole: role,
+          category: "Optimization" as const,
+          riskLevel: "low" as const,
+          affectedAreas: [`${role} agent`],
+          expectedResult: "Improved output consistency and fewer malformed responses.",
+          rollbackNote: "Use the Reset button on the Dashboard to revert to default prompts.",
+          before: agentPrompts[role],
+          after: `${agentPrompts[role]}\n\nAdditional rules:\n- Be explicit.\n- Return only valid structured output.\n- Never add markdown fences unless required.`,
+        }));
       };
 
       let parsed = parseLooseJson(stripped);
@@ -300,17 +422,16 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         parsed = buildLocalProposals();
       }
 
-      // Validate and fill in actual before text from current prompts
       const appliedKeys = new Set(
         upgradeHistory.map(u => `${u.type}:${u.agentRole ?? ""}:${u.before}:::${u.after}`)
       );
       const validated = parsed
         .map((p, i) => ({
-        ...p,
-        id: p.id ?? `up-${Date.now()}-${i}`,
-        before: p.agentRole ? (agentPrompts[p.agentRole] ?? p.before ?? "") : p.before ?? "",
-      }))
-      .filter(p => !appliedKeys.has(`${p.type}:${p.agentRole ?? ""}:${p.before}:::${p.after}`));
+          ...p,
+          id: p.id ?? `up-${Date.now()}-${i}`,
+          before: p.agentRole ? (agentPrompts[p.agentRole] ?? p.before ?? "") : p.before ?? "",
+        }))
+        .filter(p => !appliedKeys.has(`${p.type}:${p.agentRole ?? ""}:${p.before}:::${p.after}`));
 
       setProposals(validated);
     } catch (err) {
@@ -321,20 +442,32 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
   };
 
   const [installingId, setInstallingId] = useState<string | null>(null);
-  const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
 
   const handleApply = async (proposal: UpgradeProposal) => {
     setInstallingId(proposal.id);
-    // Brief install animation — gives feedback that something is happening
-    await new Promise(r => setTimeout(r, 800));
-    applyUpgrade(proposal);
-    setAppliedIds(prev => new Set(prev).add(proposal.id));
-    setInstalledIds(prev => new Set(prev).add(proposal.id));
+    setInstallerLogs(prev => ({ ...prev, [proposal.id]: [] }));
+
+    const { success } = await runInstaller(
+      proposal,
+      applyUpgrade,
+      (line) => setInstallerLogs(prev => ({
+        ...prev,
+        [proposal.id]: [...(prev[proposal.id] ?? []), line],
+      }))
+    );
+
+    if (success) {
+      setAppliedIds(prev => new Set(prev).add(proposal.id));
+    }
     setInstallingId(null);
-    // Jarvis narrates the install
+
     try {
       const { jarvisSpeak } = await import("@/lib/jarvisVoice");
-      void jarvisSpeak(`${proposal.agentRole ?? "Agent"} prompt upgraded, sir. The improvement will take effect on the next build.`);
+      void jarvisSpeak(
+        success
+          ? `${proposal.agentRole ?? "Agent"} prompt upgraded, sir. The improvement will take effect on the next build.`
+          : `Installation failed for ${proposal.title}. Check the installer log, sir.`
+      );
     } catch { /* voice optional */ }
   };
 
@@ -352,7 +485,9 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
             <h1 className="text-base font-semibold">
               {greeting}{settings.userName.trim() ? `, ${settings.userName.trim().split(" ")[0]}` : ""}
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">5-agent pipeline · {projects.length} project{projects.length !== 1 ? "s" : ""} · {memories.length} memories</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              5-agent pipeline · {projects.length} project{projects.length !== 1 ? "s" : ""} · {memories.length} memories
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {appliedUpgrades > 0 && (
@@ -373,8 +508,8 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
         {/* Stat cards */}
         <div className="grid grid-cols-3 gap-2">
           <StatCard value={AGENT_PIPELINE.length} label="Active Agents" color="#7c3aed" icon={Bot} />
-          <StatCard value={appliedUpgrades} label="Upgrades Applied" color="#10b981" icon={Sparkles} />
-          <StatCard value={readyProjects} label="Apps Built" color="#f59e0b" icon={Box} />
+          <StatCard value={appliedUpgrades}        label="Upgrades Applied" color="#10b981" icon={Sparkles} />
+          <StatCard value={readyProjects}           label="Apps Built" color="#f59e0b" icon={Box} />
         </div>
 
         {/* ── Self Upgrade ── */}
@@ -401,7 +536,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">
-              AI analyzes your current agent prompts and generates specific upgrade proposals. You review each one, see the exact before/after diff, then approve or skip. Approved changes are permanently written to the build pipeline and used in all future builds.
+              AI analyzes your agent prompts and generates upgrade proposals. Review each one — see the diff, risk level, and affected areas — then approve. Approval triggers the built-in installer which applies the change immediately and logs every step.
             </p>
 
             {showReset && (
@@ -421,12 +556,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
               </div>
             )}
 
-            <Button
-              onClick={generateProposals}
-              disabled={generating}
-              className="w-full"
-              data-testid="analyze-btn"
-            >
+            <Button onClick={generateProposals} disabled={generating} className="w-full" data-testid="analyze-btn">
               {generating
                 ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Analyzing agents &amp; generating upgrades...</>
                 : <><TrendingUp className="w-3.5 h-3.5 mr-2" />Generate Upgrade Proposals</>
@@ -434,18 +564,17 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
             </Button>
           </div>
 
-          {/* Proposals */}
           {proposals.length > 0 && (
             <div className="border-t border-border">
               <div className="px-4 py-2.5 flex items-center justify-between bg-muted/20">
                 <p className="text-xs font-medium text-muted-foreground">
-                  {proposals.length} proposals generated
-                  {pendingCount > 0 && ` · ${pendingCount} pending review`}
-                  {appliedIds.size > 0 && ` · ${appliedIds.size} applied`}
+                  {proposals.length} proposals
+                  {pendingCount > 0 && ` · ${pendingCount} pending`}
+                  {appliedIds.size > 0 && ` · ${appliedIds.size} installed`}
                 </p>
                 {appliedIds.size === proposals.length && (
                   <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> All applied
+                    <CheckCircle2 className="w-3 h-3" /> All installed
                   </span>
                 )}
               </div>
@@ -457,6 +586,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
                     appliedIds={appliedIds}
                     skippedIds={skippedIds}
                     installingId={installingId}
+                    installerLogs={installerLogs}
                     onApply={handleApply}
                     onSkip={handleSkip}
                   />
@@ -476,7 +606,7 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm font-medium">Upgrade History</p>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{upgradeHistory.length} applied</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{upgradeHistory.length} installed</span>
               </div>
               <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", showHistory && "rotate-180")} />
             </button>
@@ -488,18 +618,11 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{u.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{u.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {u.agentRole && (
-                          <span className="text-[10px] text-muted-foreground capitalize">{u.agentRole} agent</span>
-                        )}
-                        {u.appliedAt && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(u.appliedAt).toLocaleDateString()}
-                          </span>
-                        )}
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase", IMPACT_STYLE[u.impact])}>
-                          {u.impact}
-                        </span>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {u.agentRole && <span className="text-[10px] text-muted-foreground capitalize">{u.agentRole} agent</span>}
+                        {u.category && <span className="text-[10px] text-muted-foreground">{u.category}</span>}
+                        {u.appliedAt && <span className="text-[10px] text-muted-foreground">{new Date(u.appliedAt).toLocaleDateString()}</span>}
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase", IMPACT_STYLE[u.impact])}>{u.impact}</span>
                       </div>
                     </div>
                   </div>
@@ -532,83 +655,101 @@ Favor changes that reduce bugs, prevent unsafe output, improve prompt reliabilit
                         background: `${agent.color}30`,
                         border: `1px solid ${agent.color}50`,
                         color: agent.color,
+                        ringColor: isCustomized ? agent.color : undefined,
                       }}
                     >
                       {agent.name.slice(0, 2).toUpperCase()}
                       {isCustomized && (
                         <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border border-card flex items-center justify-center">
-                          <Sparkles className="w-2 h-2 text-black" />
+                          <Sparkles className="w-2 h-2 text-card" />
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{agent.name}</span>
+                    <span className="text-[9px] text-muted-foreground">{agent.name}</span>
                   </div>
                   {i < AGENT_PIPELINE.length - 1 && (
-                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 mx-1 mb-4 shrink-0" />
+                    <ArrowRight className="w-3 h-3 text-muted-foreground/40 mx-1 shrink-0" />
                   )}
                 </div>
               );
             })}
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Agents with a ✦ badge have been upgraded via Self Upgrade
-          </p>
         </div>
 
-        {/* Quick Start */}
+        {/* Quick Actions */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold">Start a Build</h2>
+          <h2 className="text-sm font-semibold">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => setLocation("/studio?platform=web")}
-              className="flex items-center gap-2.5 p-3 rounded-lg border border-border hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left"
+              onClick={() => setLocation("/studio")}
+              className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-left"
             >
-              <Globe className="w-5 h-5 text-blue-400 shrink-0" />
+              <Globe className="w-5 h-5 text-primary shrink-0" />
               <div>
-                <p className="text-xs font-medium">Web App</p>
-                <p className="text-[10px] text-muted-foreground">HTML/CSS/JS</p>
+                <p className="text-xs font-semibold">Build Web App</p>
+                <p className="text-[10px] text-muted-foreground">single index.html</p>
               </div>
             </button>
             <button
-              onClick={() => setLocation("/studio?platform=android")}
-              className="flex items-center gap-2.5 p-3 rounded-lg border border-border hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left"
+              onClick={() => { setLocation("/studio"); }}
+              className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-left"
             >
-              <Smartphone className="w-5 h-5 text-emerald-400 shrink-0" />
+              <Smartphone className="w-5 h-5 text-primary shrink-0" />
               <div>
-                <p className="text-xs font-medium">Android App</p>
-                <p className="text-[10px] text-muted-foreground">PWA · Installable</p>
+                <p className="text-xs font-semibold">Build Android App</p>
+                <p className="text-[10px] text-muted-foreground">PWA, installable</p>
+              </div>
+            </button>
+            <button
+              onClick={() => setLocation("/repair")}
+              className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-left"
+            >
+              <Brain className="w-5 h-5 text-primary shrink-0" />
+              <div>
+                <p className="text-xs font-semibold">Repair App</p>
+                <p className="text-[10px] text-muted-foreground">upload &amp; fix</p>
+              </div>
+            </button>
+            <button
+              onClick={() => setLocation("/assets")}
+              className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-left"
+            >
+              <Sparkles className="w-5 h-5 text-primary shrink-0" />
+              <div>
+                <p className="text-xs font-semibold">Generate Assets</p>
+                <p className="text-[10px] text-muted-foreground">free images &amp; storyboards</p>
               </div>
             </button>
           </div>
         </div>
 
-        {/* Training + Memory */}
-        <div className="grid grid-cols-2 gap-3">
-          <div
-            className="rounded-xl border border-border bg-card p-4 space-y-2 cursor-pointer hover:border-primary/30"
-            onClick={() => setLocation("/training")}
-          >
-            <p className="text-xs font-medium text-muted-foreground">AI Training</p>
-            <div className="flex items-end justify-between">
-              <p className="text-xl font-bold text-primary">{trainingPercent}%</p>
-              <p className="text-[10px] text-muted-foreground">{trainedLessons}/{totalLessons}</p>
+        {/* Training status */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Builder Training</h2>
+            <button onClick={() => setLocation("/training")} className="text-xs text-primary hover:underline flex items-center gap-0.5">
+              View training <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{trainedLessons} / {totalLessons} lessons</span>
+              <span className="font-medium">{trainingPercent}%</span>
             </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: `${trainingPercent}%` }} />
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${trainingPercent}%` }}
+              />
             </div>
           </div>
-          <div
-            className="rounded-xl border border-border bg-card p-4 space-y-2 cursor-pointer hover:border-primary/30"
-            onClick={() => setLocation("/memory")}
-          >
-            <p className="text-xs font-medium text-muted-foreground">Memory Bank</p>
-            <div className="flex items-end justify-between">
-              <p className="text-xl font-bold text-emerald-400">{memories.length}</p>
-              <p className="text-[10px] text-muted-foreground">{memorySavedCount} auto</p>
-            </div>
-            <p className="text-[10px] text-muted-foreground">memories stored</p>
-          </div>
+          {memorySavedCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {memorySavedCount} memory entries auto-injected into every build
+            </p>
+          )}
         </div>
+
       </div>
     </div>
   );
