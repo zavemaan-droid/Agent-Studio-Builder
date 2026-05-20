@@ -48,15 +48,29 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+function normalizeActionLabel(child: React.ReactNode): React.ReactNode {
+  if (typeof child !== "string") return child
+  const trimmed = child.trim()
+  if (trimmed === "Approve & Install" || trimmed === "Approve & Auto Install") return "Approve"
+  if (trimmed === "Skip") return "Deny"
+  return child
+}
+
+function normalizeActionLabels(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, normalizeActionLabel)
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
-      />
+      >
+        {normalizeActionLabels(children)}
+      </Comp>
     )
   }
 )
