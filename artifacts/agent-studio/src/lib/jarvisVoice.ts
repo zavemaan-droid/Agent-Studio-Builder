@@ -6,6 +6,13 @@ export interface JarvisStateEvent {
   online: boolean;
 }
 
+type JarvisStatePatch = Partial<JarvisStateEvent> & {
+  isOnline?: boolean;
+  queue?: unknown;
+  queueStatus?: string;
+  wakeActive?: boolean;
+};
+
 type SpeakFn  = (text: string) => Promise<void>;
 type VoidFn   = () => void;
 type BuildFn  = (description: string, platform: string) => Promise<string>;
@@ -34,6 +41,13 @@ export function jarvisBuildVoice(description: string, platform: string): Promise
   return _r.buildVoice?.(description, platform) ?? Promise.resolve("");
 }
 
-export function dispatchJarvisState(state: JarvisStateEvent): void {
-  window.dispatchEvent(new CustomEvent<JarvisStateEvent>("jarvis:state", { detail: state }));
+export function dispatchJarvisState(patch: JarvisStatePatch): void {
+  const normalized: JarvisStateEvent = {
+    mode: patch.mode ?? "idle",
+    handsFree: patch.handsFree ?? false,
+    reply: patch.reply ?? "",
+    transcript: patch.transcript ?? "",
+    online: patch.online ?? patch.isOnline ?? (typeof navigator !== "undefined" ? navigator.onLine : true),
+  };
+  window.dispatchEvent(new CustomEvent<JarvisStateEvent>("jarvis:state", { detail: normalized }));
 }
