@@ -32,7 +32,7 @@ export function BottomNav() {
                 active ? "text-primary" : "text-sidebar-foreground/50"
               )}
             >
-              <Icon className={cn("w5 h5 transition-all", active && "scale-110")} />
+              <Icon className={cn("w-5 h-5 transition-all", active && "scale-110")} />
               <span className={cn(
                 "text-[9px] font-medium tracking-wide transition-all",
                 active ? "opacity-100" : "opacity-60"
