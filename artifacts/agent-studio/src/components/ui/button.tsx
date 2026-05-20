@@ -48,16 +48,25 @@ export interface ButtonProps
   asChild?: boolean
 }
 
-function normalizeActionLabel(child: React.ReactNode): React.ReactNode {
-  if (typeof child !== "string") return child
-  const trimmed = child.trim()
+function normalizeActionText(text: string): string {
+  const trimmed = text.trim()
   if (trimmed === "Approve & Install" || trimmed === "Approve & Auto Install") return "Approve"
   if (trimmed === "Skip") return "Deny"
-  return child
+  return text
+}
+
+function normalizeActionNode(child: React.ReactNode): React.ReactNode {
+  if (typeof child === "string") return normalizeActionText(child)
+  if (!React.isValidElement(child)) return child
+
+  const element = child as React.ReactElement<{ children?: React.ReactNode }>
+  if (element.props.children === undefined) return child
+
+  return React.cloneElement(element, undefined, normalizeActionLabels(element.props.children))
 }
 
 function normalizeActionLabels(children: React.ReactNode): React.ReactNode {
-  return React.Children.map(children, normalizeActionLabel)
+  return React.Children.map(children, normalizeActionNode)
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
